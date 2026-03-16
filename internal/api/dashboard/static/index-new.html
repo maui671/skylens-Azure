@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/png" href="/img/icon-192.png">
+<title>Skylens — Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="/css/core.css">
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok)SkylensAuth.renderUserMenu('user-menu-container');});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<div class="app-shell" id="app">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-logo">S</div>
+        </div>
+        <div class="sidebar-nav">
+            <a href="#" class="nav-item active" data-view="airspace" title="Airspace Monitor">
+                <span class="nav-icon">&#9678;</span>
+            </a>
+            <a href="#" class="nav-item" data-view="fleet" title="UAV Fleet">
+                <span class="nav-icon">&#9650;</span>
+                <span class="nav-badge hidden" id="fleet-badge">0</span>
+            </a>
+            <a href="#" class="nav-item" data-view="taps" title="Sensors">
+                <span class="nav-icon">&#9673;</span>
+            </a>
+            <a href="#" class="nav-item" data-view="alerts" title="Alerts">
+                <span class="nav-icon">&#9888;</span>
+                <span class="nav-badge hidden" id="alert-badge">0</span>
+            </a>
+            <a href="#" class="nav-item" data-view="system" title="System">
+                <span class="nav-icon">&#9881;</span>
+            </a>
+        </div>
+        <div class="sidebar-footer">
+            <div id="user-menu-container"></div>
+            <div class="status-indicator">
+                <span class="status-dot" id="conn-dot"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-left">
+            <h1 class="header-title">SKYLENS</h1>
+            <div class="threat-status">
+                <div class="threat-level low" id="threat-level">
+                    <span class="threat-dot"></span>
+                    <span id="threat-text">LOW</span>
+                </div>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-label">UAVs</span>
+                    <span class="stat-value" id="stat-uavs">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Sensors</span>
+                    <span class="stat-value" id="stat-sensors">0/0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Frames</span>
+                    <span class="stat-value" id="stat-frames">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="header-btn" id="btn-sound" title="Toggle Sound">
+                <span>&#128266;</span>
+            </button>
+            <button class="header-btn" id="btn-fullscreen" title="Fullscreen">
+                <span>&#9974;</span>
+            </button>
+            <span class="header-clock" id="clock">00:00:00</span>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- Map HUD Overlays -->
+        <div class="map-overlay map-hud-top">
+            <div class="hud-box" id="hud-coords">---, ---</div>
+            <div class="hud-box" id="hud-zoom">Zoom: --</div>
+        </div>
+        <div class="map-overlay map-hud-bottom">
+            <div class="hud-box" id="hud-scale">-- m</div>
+        </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <aside class="right-panel" id="right-panel">
+        <div class="panel-header">
+            <span class="panel-title">Contacts</span>
+            <span class="panel-count" id="contact-count">0</span>
+        </div>
+
+        <div class="panel-tabs">
+            <button class="panel-tab active" data-tab="contacts">Contacts</button>
+            <button class="panel-tab" data-tab="sensors">Sensors</button>
+            <button class="panel-tab" data-tab="alerts">Alerts</button>
+        </div>
+
+        <!-- CONTACTS TAB -->
+        <div class="panel-content" id="tab-contacts">
+            <div class="contact-list" id="contact-list">
+                <!-- Empty state -->
+                <div class="empty-state" id="empty-contacts">
+                    <div class="radar-sweep">
+                        <div class="radar-ring"></div>
+                        <div class="radar-ring"></div>
+                        <div class="radar-ring"></div>
+                        <div class="radar-line"></div>
+                        <div class="radar-center"></div>
+                    </div>
+                    <div class="empty-title">Scanning Airspace</div>
+                    <div class="empty-text">No contacts detected. Monitoring for drone activity.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SENSORS TAB -->
+        <div class="panel-content hidden" id="tab-sensors">
+            <div id="sensor-list">
+                <div class="empty-state" id="empty-sensors">
+                    <div class="empty-icon">&#9673;</div>
+                    <div class="empty-title">No Sensors</div>
+                    <div class="empty-text">No sensors are currently connected to this node.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALERTS TAB -->
+        <div class="panel-content hidden" id="tab-alerts">
+            <div class="alerts-section" id="alert-list">
+                <div class="empty-state" id="empty-alerts">
+                    <div class="empty-icon">&#9888;</div>
+                    <div class="empty-title">All Clear</div>
+                    <div class="empty-text">No alerts at this time.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAIL VIEW (shown when contact selected) -->
+        <div class="detail-view hidden" id="detail-view">
+            <div class="detail-header">
+                <div>
+                    <div class="detail-title" id="detail-name">--</div>
+                    <div class="detail-subtitle" id="detail-id">--</div>
+                </div>
+                <button class="detail-close" id="detail-close">&times;</button>
+            </div>
+
+            <div class="detail-gauges">
+                <div class="gauge">
+                    <svg class="gauge-circle" viewBox="0 0 72 72">
+                        <circle class="gauge-bg" cx="36" cy="36" r="30"/>
+                        <circle class="gauge-fill safe" id="gauge-trust" cx="36" cy="36" r="30"
+                            stroke-dasharray="188.5" stroke-dashoffset="0"
+                            transform="rotate(-90 36 36)"/>
+                        <text class="gauge-value" x="36" y="38" id="gauge-trust-val">--</text>
+                        <text class="gauge-unit" x="36" y="48">%</text>
+                    </svg>
+                    <div class="gauge-label">Trust</div>
+                </div>
+                <div class="gauge">
+                    <svg class="gauge-circle" viewBox="0 0 72 72">
+                        <circle class="gauge-bg" cx="36" cy="36" r="30"/>
+                        <circle class="gauge-fill safe" id="gauge-alt" cx="36" cy="36" r="30"
+                            stroke-dasharray="188.5" stroke-dashoffset="188.5"
+                            transform="rotate(-90 36 36)"/>
+                        <text class="gauge-value" x="36" y="38" id="gauge-alt-val">--</text>
+                        <text class="gauge-unit" x="36" y="48">m</text>
+                    </svg>
+                    <div class="gauge-label">Altitude</div>
+                </div>
+                <div class="gauge">
+                    <svg class="gauge-circle" viewBox="0 0 72 72">
+                        <circle class="gauge-bg" cx="36" cy="36" r="30"/>
+                        <circle class="gauge-fill safe" id="gauge-speed" cx="36" cy="36" r="30"
+                            stroke-dasharray="188.5" stroke-dashoffset="188.5"
+                            transform="rotate(-90 36 36)"/>
+                        <text class="gauge-value" x="36" y="38" id="gauge-speed-val">--</text>
+                        <text class="gauge-unit" x="36" y="48">m/s</text>
+                    </svg>
+                    <div class="gauge-label">Speed</div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Position</div>
+                <div class="detail-grid">
+                    <div class="detail-row">
+                        <span class="detail-label">Latitude</span>
+                        <span class="detail-value" id="detail-lat">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Longitude</span>
+                        <span class="detail-value" id="detail-lng">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">MGRS</span>
+                        <span class="detail-value" id="detail-mgrs">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Heading</span>
+                        <span class="detail-value" id="detail-heading">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Distance</span>
+                        <span class="detail-value" id="detail-distance">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Identity</div>
+                <div class="detail-grid">
+                    <div class="detail-row">
+                        <span class="detail-label">Protocol</span>
+                        <span class="detail-value" id="detail-proto">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Type</span>
+                        <span class="detail-value" id="detail-type">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Model</span>
+                        <span class="detail-value" id="detail-model">--</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Signal</span>
+                        <span class="detail-value" id="detail-rssi">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <div class="detail-section-title">Operator</div>
+                <div class="detail-row">
+                    <span class="detail-label">Operator ID</span>
+                    <span class="detail-value" id="detail-operator">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Operator Location</span>
+                    <span class="detail-value" id="detail-op-loc">--</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Op MGRS</span>
+                    <span class="detail-value" id="detail-op-mgrs">--</span>
+                </div>
+            </div>
+
+            <div class="detail-actions">
+                <button class="detail-btn primary" id="btn-locate">Locate</button>
+                <button class="detail-btn" id="btn-history">History</button>
+                <button class="detail-btn danger" id="btn-hide">Hide</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- STATUS BAR -->
+    <footer class="status-bar">
+        <div class="status-group">
+            <div class="status-item">
+                <span>Node:</span>
+                <strong id="status-node">skylens-node</strong>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+                <span>Uptime:</span>
+                <strong id="status-uptime">--</strong>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+                <span>Version:</span>
+                <strong id="status-version">--</strong>
+            </div>
+        </div>
+        <div class="status-group">
+            <div class="status-item">
+                <span>Rate:</span>
+                <strong id="status-rate">0/s</strong>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item" id="status-tailscale" style="display:none">
+                <span>Tailscale:</span>
+                <strong id="status-ts-ip">--</strong>
+            </div>
+        </div>
+    </footer>
+
+</div>
+
+<!-- MODAL BACKDROP -->
+<div class="modal-backdrop" id="modal-backdrop"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="modal-settings">
+    <div class="modal-header">
+        <span class="modal-title">Settings</span>
+        <button class="modal-close" data-close>&times;</button>
+    </div>
+    <div class="modal-body">
+        <div class="form-group">
+            <label class="form-label">Map Style</label>
+            <select class="form-input form-select" id="set-map-style">
+                <option value="satellite">Satellite</option>
+                <option value="dark">Dark</option>
+                <option value="terrain">Terrain</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Poll Interval</label>
+            <select class="form-input form-select" id="set-poll">
+                <option value="500">500ms (Fast)</option>
+                <option value="1000" selected>1s (Default)</option>
+                <option value="2000">2s (Slow)</option>
+            </select>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn" data-close>Cancel</button>
+        <button class="btn btn-primary" id="btn-save-settings">Save</button>
+    </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/js/mgrs.js"></script>
+<script src="/js/core.js"></script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

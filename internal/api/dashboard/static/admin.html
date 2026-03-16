@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — Users</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<link rel="icon" type="image/svg+xml" href="/img/icon-192.svg">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/components.css">
+<style>
+/* Admin-specific styles */
+.admin-content {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.admin-header h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--t0);
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hi) 100%);
+    border: none;
+    border-radius: 6px;
+    color: var(--bg0);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(76,175,80,0.3);
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--t1);
+    font-family: var(--font);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--bg3);
+}
+
+.btn-danger {
+    background: transparent;
+    border: 1px solid var(--critical);
+    color: var(--critical);
+}
+
+.btn-danger:hover {
+    background: var(--critical-dim);
+}
+
+/* User table */
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.users-table th {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: var(--bg2);
+}
+
+.users-table tr:hover {
+    background: var(--bg2);
+}
+
+.user-row {
+    cursor: pointer;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bg0);
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-name {
+    font-weight: 500;
+    color: var(--t0);
+}
+
+.user-email {
+    font-size: 12px;
+    color: var(--t2);
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-admin { background: var(--accent-dim); color: var(--accent); }
+.role-operator { background: var(--info-dim); color: var(--info); }
+.role-viewer { background: var(--bg3); color: var(--t2); }
+
+.status-active { color: var(--accent); }
+.status-inactive { color: var(--t3); }
+.status-locked { color: var(--critical); }
+
+.actions-cell {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    padding: 6px 12px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--t1);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--bg3);
+}
+
+.action-btn.danger {
+    border-color: var(--critical);
+    color: var(--critical);
+}
+
+.action-btn.danger:hover {
+    background: var(--critical-dim);
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .25s, visibility .25s;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    position: fixed;
+    top: 50%;
+    left: calc(var(--sidebar-w) + (100vw - var(--sidebar-w)) / 2);
+    transform: translate(-50%, -50%) scale(0.92);
+    background: var(--bg1);
+    border: 1px solid var(--border-hi);
+    border-radius: 16px;
+    width: 520px;
+    max-width: calc(100vw - var(--sidebar-w) - 48px);
+    max-height: 85vh;
+    overflow-y: auto;
+    z-index: 10000;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(76,175,80,0.08);
+    transition: transform .25s cubic-bezier(.16,1,.3,1);
+}
+
+.modal-overlay.visible .modal {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--t0);
+    line-height: 1.2;
+}
+
+.modal-subtitle {
+    font-size: 12px;
+    color: var(--t3);
+    margin-top: 4px;
+}
+
+.modal-close {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--t2);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: -2px;
+}
+
+.modal-close:hover {
+    color: var(--t0);
+    border-color: var(--border-hi);
+    background: var(--bg3);
+}
+
+.modal-body {
+    padding: 24px 28px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg0);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--t0);
+    font-family: var(--font);
+    font-size: 14px;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.form-input::placeholder { color: var(--t3); }
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(76,175,80,0.12);
+}
+
+.form-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%236B9B74' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+}
+
+.form-help {
+    font-size: 11px;
+    color: var(--t3);
+    margin-top: 5px;
+}
+
+.pw-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--t2);
+    font-size: 11px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-family: var(--font);
+}
+
+.pw-toggle:hover { color: var(--t0); border-color: var(--border-hi); }
+
+/* Toggle switch */
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin-top: 6px;
+}
+.toggle-label input { display: none; }
+.toggle-track {
+    width: 36px; height: 20px;
+    background: var(--bg3);
+    border-radius: 10px;
+    position: relative;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+.toggle-label input:checked + .toggle-track { background: var(--accent); }
+.toggle-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    background: var(--t0);
+    border-radius: 50%;
+    transition: left .2s;
+}
+.toggle-label input:checked + .toggle-track .toggle-thumb { left: 18px; }
+.toggle-text { font-size: 13px; color: var(--t1); }
+
+/* TAP checkboxes */
+.tap-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tap-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg0);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--t2);
+    font-weight: 500;
+    transition: all .15s;
+    user-select: none;
+}
+
+.tap-checkbox:hover {
+    border-color: var(--border-hi);
+    color: var(--t1);
+}
+
+.tap-checkbox input { display: none; }
+
+.tap-checkbox .tap-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--t3);
+    transition: background .15s;
+}
+
+.tap-checkbox.checked {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.tap-checkbox.checked .tap-dot {
+    background: var(--accent);
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 16px 28px 24px;
+    border-top: 1px solid var(--border);
+}
+
+/* Loading */
+.loading-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10,14,13,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--t2);
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    color: var(--t1);
+    margin-bottom: 8px;
+}
+
+/* Toast notifications */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 14px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--t0);
+    font-size: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    z-index: 10000;
+}
+
+.toast.visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.toast.success {
+    border-color: var(--accent);
+}
+
+.toast.error {
+    border-color: var(--critical);
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok)SkylensAuth.renderUserMenu('user-menu-container');});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item active">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer" id="user-menu-container">
+    <!-- User menu will be rendered here -->
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+  <div class="admin-content">
+    <div class="admin-header">
+      <h1>User Management</h1>
+      <button class="btn-primary" onclick="showCreateModal()">
+        <span>+</span> Add User
+      </button>
+    </div>
+
+    <section class="section">
+      <div class="tbl-wrap">
+        <table class="users-table" id="users-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Last Login</th>
+              <th>TAP Access</th>
+              <th style="width:160px">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-body">
+            <tr>
+              <td colspan="6" style="text-align:center;padding:40px;color:var(--t2)">Loading users...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- User Modal (Create / Edit) -->
+<div class="modal-overlay" id="user-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h2 id="modal-title">Create User</h2>
+        <div class="modal-subtitle" id="modal-subtitle"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <form id="user-form" onsubmit="saveUser(event)">
+      <div class="modal-body">
+        <input type="hidden" id="user-id">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input type="text" id="username" class="form-input" required autocomplete="off" placeholder="e.g. operator1">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="display-name">Display Name</label>
+            <input type="text" id="display-name" class="form-input" autocomplete="off" placeholder="e.g. John Doe">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email</label>
+          <input type="email" id="email" class="form-input" autocomplete="off" placeholder="user@skylens.local">
+        </div>
+
+        <div class="form-group" id="password-group">
+          <label class="form-label" for="password">
+            Password <span id="password-optional" style="display:none;font-weight:400;text-transform:none;letter-spacing:0;color:var(--t3)">(leave blank to keep current)</span>
+          </label>
+          <div style="position:relative">
+            <input type="password" id="password" class="form-input" autocomplete="new-password" placeholder="Min 8 characters">
+            <button type="button" class="pw-toggle" onclick="togglePwVis(this)" tabindex="-1">Show</button>
+          </div>
+          <div class="form-help">Uppercase, lowercase, digit, and special character required</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="role">Role</label>
+            <select id="role" class="form-select"></select>
+          </div>
+          <div class="form-group" id="active-group" style="display:none">
+            <label class="form-label">Status</label>
+            <label class="toggle-label">
+              <input type="checkbox" id="is-active" checked>
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span class="toggle-text" id="active-text">Active</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" id="taps-group">
+          <label class="form-label">Assigned TAPs</label>
+          <div class="form-help" style="margin-bottom:10px">Click to toggle. Empty = full access to all TAPs.</div>
+          <div class="tap-checkboxes" id="tap-checkboxes"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn-primary" id="save-btn">Create User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+(async function() {
+    // Wait for auth to be ready
+    await SkylensAuth.init();
+
+    // Check admin role
+    if (!SkylensAuth.isAdmin()) {
+        alert('Admin access required');
+        window.location.href = '/';
+        return;
+    }
+
+    // Render user menu
+    SkylensAuth.renderUserMenu('user-menu-container');
+
+    // Load data
+    await Promise.all([
+        loadUsers(),
+        loadRoles(),
+        loadTaps()
+    ]);
+    SkylensAuth.revealPage();
+})();
+
+let users = [];
+let roles = [];
+let taps = [];
+
+async function loadUsers() {
+    try {
+        const response = await SkylensAuth.fetch('/api/admin/users');
+        const data = await response.json();
+        users = data.users || [];
+        renderUsers();
+    } catch (err) {
+        showToast('Failed to load users', 'error');
+    }
+}
+
+async function loadRoles() {
+    try {
+        const response = await SkylensAuth.fetch('/api/auth/roles');
+        const data = await response.json();
+        roles = data.roles || [];
+
+        // Populate role select
+        const select = document.getElementById('role');
+        select.innerHTML = roles.map(r => `
+            <option value="${r.id}">${r.name} - ${r.description || ''}</option>
+        `).join('');
+    } catch (err) {
+        console.error('Failed to load roles:', err);
+    }
+}
+
+async function loadTaps() {
+    try {
+        const response = await SkylensAuth.fetch('/api/taps');
+        const data = await response.json();
+        taps = Array.isArray(data) ? data : (data.taps || []);
+        rebuildTapCheckboxes();
+    } catch (err) {
+        console.error('Failed to load TAPs:', err);
+    }
+}
+
+function rebuildTapCheckboxes() {
+    const container = document.getElementById('tap-checkboxes');
+    if (taps.length === 0) {
+        container.innerHTML = '<span style="color:var(--t3);font-size:13px">No TAPs connected</span>';
+        return;
+    }
+    container.innerHTML = taps.map(t => {
+        const id = t.tap_uuid || t.id;
+        const name = t.tap_name || id;
+        const online = t.status === 'online';
+        return '<label class="tap-checkbox" data-tap="' + escapeHtml(id) + '">' +
+            '<input type="checkbox" value="' + escapeHtml(id) + '">' +
+            '<span class="tap-dot"></span>' +
+            escapeHtml(name) +
+            (online ? '' : ' <span style="font-size:10px;color:var(--t3)">(offline)</span>') +
+            '</label>';
+    }).join('');
+
+    container.querySelectorAll('.tap-checkbox').forEach(label => {
+        label.addEventListener('click', e => {
+            e.preventDefault();
+            label.classList.toggle('checked');
+            label.querySelector('input').checked = label.classList.contains('checked');
+        });
+    });
+}
+
+function renderUsers() {
+    const tbody = document.getElementById('users-body');
+
+    if (users.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6">
+                    <div class="empty-state">
+                        <h3>No Users</h3>
+                        <p>Create your first user to get started</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = users.map(u => {
+        const initials = getInitials(u.display_name || u.username);
+        const status = u.is_locked ? 'locked' : (u.is_active ? 'active' : 'inactive');
+        const lastLogin = u.last_login ? formatDate(u.last_login) : 'Never';
+        const tapAccess = u.allowed_taps && u.allowed_taps.length > 0
+            ? u.allowed_taps.length + ' TAP' + (u.allowed_taps.length > 1 ? 's' : '')
+            : 'All TAPs';
+
+        return `
+            <tr class="user-row" data-id="${u.id}">
+                <td>
+                    <div class="user-cell">
+                        <div class="user-avatar">${initials}</div>
+                        <div>
+                            <div class="user-name">${escapeHtml(u.display_name || u.username)}</div>
+                            <div class="user-email">${escapeHtml(u.email || u.username)}</div>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="role-badge role-${u.role_name}">${u.role_name}</span></td>
+                <td><span class="status-${status}">${status}</span></td>
+                <td>${lastLogin}</td>
+                <td>${tapAccess}</td>
+                <td class="actions-cell">
+                    <button class="action-btn" onclick="editUser(${u.id})" title="Edit">Edit</button>
+                    ${u.username !== 'admin' ? `
+                    <button class="action-btn danger" onclick="deleteUser(${u.id}, '${escapeHtml(u.username)}')" title="Delete">Delete</button>
+                    ` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function showCreateModal() {
+    document.getElementById('modal-title').textContent = 'Create User';
+    document.getElementById('modal-subtitle').textContent = 'Add a new user to the system';
+    document.getElementById('save-btn').textContent = 'Create User';
+    document.getElementById('user-id').value = '';
+    document.getElementById('user-form').reset();
+    document.getElementById('password').required = true;
+    document.getElementById('password').placeholder = 'Min 8 characters';
+    document.getElementById('password-optional').style.display = 'none';
+    document.getElementById('active-group').style.display = 'none';
+    document.getElementById('username').disabled = false;
+
+    // Reset TAP checkboxes
+    rebuildTapCheckboxes();
+
+    document.getElementById('user-modal').classList.add('visible');
+    setTimeout(() => document.getElementById('username').focus(), 100);
+}
+
+function editUser(id) {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+
+    document.getElementById('modal-title').textContent = 'Edit User';
+    document.getElementById('modal-subtitle').textContent = 'Editing ' + (user.display_name || user.username);
+    document.getElementById('save-btn').textContent = 'Save Changes';
+    document.getElementById('user-id').value = id;
+    document.getElementById('username').value = user.username;
+    document.getElementById('username').disabled = (user.username === 'admin');
+    document.getElementById('email').value = user.email || '';
+    document.getElementById('display-name').value = user.display_name || '';
+    document.getElementById('role').value = user.role_id;
+    document.getElementById('is-active').checked = user.is_active;
+    updateActiveText();
+
+    // Password optional on edit
+    document.getElementById('password').required = false;
+    document.getElementById('password').value = '';
+    document.getElementById('password').placeholder = 'Enter new password';
+    document.getElementById('password-optional').style.display = 'inline';
+    document.getElementById('active-group').style.display = '';
+
+    // Set TAP checkboxes
+    rebuildTapCheckboxes();
+    document.querySelectorAll('.tap-checkbox').forEach(l => {
+        const tapId = l.dataset.tap;
+        const checked = user.allowed_taps && user.allowed_taps.includes(tapId);
+        l.classList.toggle('checked', !!checked);
+        l.querySelector('input').checked = !!checked;
+    });
+
+    document.getElementById('user-modal').classList.add('visible');
+}
+
+function closeModal() {
+    document.getElementById('user-modal').classList.remove('visible');
+}
+
+function togglePwVis(btn) {
+    const inp = document.getElementById('password');
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Hide'; }
+    else { inp.type = 'password'; btn.textContent = 'Show'; }
+}
+
+function updateActiveText() {
+    const el = document.getElementById('active-text');
+    if (el) el.textContent = document.getElementById('is-active').checked ? 'Active' : 'Inactive';
+}
+document.getElementById('is-active').addEventListener('change', updateActiveText);
+
+async function saveUser(e) {
+    e.preventDefault();
+
+    const userId = document.getElementById('user-id').value;
+    const isEdit = !!userId;
+    const pw = document.getElementById('password').value;
+
+    // Collect TAP access
+    const allowedTaps = [];
+    document.querySelectorAll('.tap-checkbox.checked').forEach(l => {
+        allowedTaps.push(l.dataset.tap);
+    });
+
+    try {
+        if (!isEdit) {
+            // Create new user
+            const data = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value || undefined,
+                display_name: document.getElementById('display-name').value || undefined,
+                role_id: parseInt(document.getElementById('role').value),
+                password: pw,
+                allowed_taps: allowedTaps
+            };
+
+            const response = await SkylensAuth.fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to create user');
+            }
+            showToast('User created', 'success');
+        } else {
+            // Update existing user
+            const data = {
+                email: document.getElementById('email').value || '',
+                display_name: document.getElementById('display-name').value || '',
+                role_id: parseInt(document.getElementById('role').value),
+                is_active: document.getElementById('is-active').checked,
+                allowed_taps: allowedTaps
+            };
+
+            const response = await SkylensAuth.fetch('/api/admin/users/' + userId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to update user');
+            }
+
+            // If password was provided, also reset it
+            if (pw) {
+                const pwResp = await SkylensAuth.fetch('/api/admin/users/' + userId + '/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_password: pw })
+                });
+                if (!pwResp.ok) {
+                    const err = await pwResp.json();
+                    throw new Error(err.error || 'User updated but password change failed');
+                }
+            }
+            showToast('User updated', 'success');
+        }
+
+        closeModal();
+        await loadUsers();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function deleteUser(id, username) {
+    if (!confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const response = await SkylensAuth.fetch(`/api/admin/users/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Failed to delete user');
+        }
+
+        showToast('User deleted', 'success');
+        await loadUsers();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+}
+
+
+function showToast(message, type) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast ' + type + ' visible';
+    setTimeout(() => toast.classList.remove('visible'), 3000);
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.split(/[\s-_]+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+}
+
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+
+    return date.toLocaleDateString();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

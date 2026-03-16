@@ -1,0 +1,973 @@
+/* ═══════════════════════════════════════════════════════
+   SKYLENS MOBILE OVERHAUL
+   Progressive enhancement — loaded after all other CSS.
+   Only activates at mobile breakpoints.
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── HAMBURGER BUTTON ─── */
+.mobile-hamburger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    color: var(--t0, var(--text-primary, #e8ecf0));
+    cursor: pointer;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 5;
+}
+.mobile-hamburger svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* ─── DRAWER OVERLAY ─── */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.mobile-overlay.visible {
+    opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   GLOBAL DEFAULTS — hide mobile-only elements at all sizes,
+   media queries below will show them on mobile
+   ═══════════════════════════════════════════════════════ */
+.mobile-hamburger,
+.mobile-overlay,
+.mobile-fab,
+.mobile-fab-menu {
+    display: none;
+}
+
+/* MAP ZOOM FIX — prevent page zoom when interacting with map
+   touch-action only affects touch devices, no impact on desktop mouse */
+#map,
+#map-section,
+.map-container,
+.leaflet-container {
+    touch-action: none;
+}
+.airspace-page {
+    touch-action: manipulation;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BREAKPOINT: 900px (tablet/mobile)
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+
+    /* Show hamburger */
+    .mobile-hamburger {
+        display: flex;
+    }
+
+    /* ── OLD SIDEBAR (#sidebar) → drawer ── */
+    #sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        min-width: 280px;
+        height: 100vh;
+        height: 100dvh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: none;
+    }
+    #sidebar.drawer-open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Remove margin offset — main fills viewport */
+    #main {
+        margin-left: 0;
+        padding: 0 16px 24px;
+    }
+
+    /* ── NEW SIDEBAR (.sidebar) → drawer ── */
+    .sidebar {
+        display: flex !important;
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        height: 100dvh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: none;
+        background: var(--bg-surface, var(--bg1));
+        border-right: 1px solid var(--border-subtle, var(--border));
+        flex-direction: column;
+    }
+    .sidebar.drawer-open {
+        transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+    }
+
+    /* New sidebar: show labels in drawer mode */
+    .sidebar .nav-item {
+        justify-content: flex-start;
+        padding-left: 20px;
+        gap: 14px;
+    }
+    .sidebar .nav-item::after {
+        content: attr(title);
+        font-size: 14px;
+        font-weight: 500;
+    }
+    .sidebar .nav-badge {
+        position: static;
+        margin-left: auto;
+    }
+
+    /* App shell grid: remove sidebar column */
+    .app-shell {
+        grid-template-areas:
+            "header header"
+            "main main"
+            "panel panel"
+            "status status";
+        grid-template-columns: 1fr;
+        grid-template-rows: var(--header-height) 1fr auto var(--status-height);
+    }
+
+    /* ── HEADER ADAPTATION ── */
+
+    /* Old header: tighten */
+    #hdr {
+        padding: 12px 0 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    #hdr .hdr-left h1 {
+        font-size: 18px;
+    }
+    #hdr .hdr-right {
+        gap: 10px;
+        font-size: 11px;
+    }
+    /* Hide verbose connection text on mobile */
+    .hdr-conn {
+        font-size: 0;
+    }
+    .hdr-conn .hdr-dot {
+        font-size: initial;
+    }
+    .hdr-uptime {
+        display: none;
+    }
+    .hdr-node {
+        display: none;
+    }
+
+    /* New header: hide stats text */
+    .header-stats {
+        display: none;
+    }
+    .header-title {
+        font-size: 14px !important;
+    }
+    .header-right {
+        gap: var(--sp-2, 8px);
+    }
+    .header-clock {
+        font-size: 11px;
+    }
+
+    /* ── TOUCH TARGETS ── */
+
+    /* Buttons */
+    button,
+    .btn,
+    .filter-select,
+    .ack-all-btn,
+    [type="submit"],
+    [type="button"] {
+        min-height: 44px;
+        font-size: 14px;
+    }
+
+    /* Form inputs — 16px font prevents iOS zoom */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="number"],
+    input[type="url"],
+    input[type="tel"],
+    select,
+    textarea {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    /* Sidebar nav items (already 44px in core, but enforce in old) */
+    .sb-item {
+        min-height: 44px;
+        padding: 12px 16px;
+    }
+
+    /* Card action buttons */
+    .tap-detail-body button,
+    .drone-actions button,
+    .card-actions button {
+        min-height: 44px;
+        padding: 10px 16px;
+    }
+
+    /* Modal buttons */
+    .modal-footer button,
+    .tm-foot button,
+    .m-foot button {
+        min-height: 48px;
+        font-size: 14px;
+    }
+
+    /* Header buttons */
+    .header-btn {
+        width: 44px;
+        height: 44px;
+    }
+
+    /* ── FONT SCALING ── */
+    html {
+        font-size: 14px;
+    }
+    .section-title,
+    .tap-detail-section-title {
+        font-size: 11px;
+    }
+
+    /* ── DASHBOARD / INDEX ── */
+    #kpi-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    #split-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* Taps page KPI */
+    #tap-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    #tap-summary .tap-kpi:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    /* Taps detail grid: single column */
+    #tap-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Tap card sections: stack vertically on narrow */
+    .tap-detail-sections {
+        grid-template-columns: 1fr;
+    }
+
+    /* Fleet page */
+    .summary-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .filter-bar {
+        gap: 8px;
+    }
+    .filter-search {
+        min-width: 0;
+        width: 100%;
+        flex-basis: 100%;
+    }
+    .filter-label {
+        display: none;
+    }
+    .filter-select {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* Drone cards: single column */
+    .drone-grid,
+    .fleet-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Alerts */
+    .alert-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Admin tables: horizontal scroll */
+    .table-wrap,
+    .admin-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .admin-table-wrap table,
+    .table-wrap table {
+        min-width: 600px;
+    }
+
+    /* Settings / profile forms: full width */
+    .settings-grid,
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Analytics charts */
+    .chart-grid,
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* System page */
+    .system-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* ── MODALS: full-screen on mobile ── */
+    .modal,
+    .tm-modal,
+    .tap-modal {
+        width: 95vw !important;
+        max-width: none !important;
+        max-height: 90vh;
+        max-height: 90dvh;
+    }
+
+    /* ── AIRSPACE PAGE ── */
+
+    /* Toolbar: compact, hide secondary items */
+    .airspace-page #toolbar {
+        height: 40px;
+        padding: 0 8px;
+        gap: 4px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .airspace-page .tb-brand .tb-sub {
+        display: none;
+    }
+    .airspace-page .tb-end {
+        display: none;
+    }
+    .airspace-page .tb-btn {
+        min-height: 36px;
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    /* Threat bar: compact single row */
+    .airspace-page #threat-bar {
+        height: 26px;
+        padding: 0 8px;
+        font-size: 10px;
+    }
+    .airspace-page .thb-lbl {
+        display: none;
+    }
+    .airspace-page .thb-right {
+        gap: 8px;
+    }
+    .airspace-page .thb-clock {
+        display: none;
+    }
+
+    /* Status bar: hide on mobile */
+    .airspace-page #status-bar {
+        display: none;
+    }
+
+    /* Alert panel: collapse to minimal */
+    .airspace-page #alert-panel {
+        height: auto;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+    .airspace-page #alert-panel.mobile-expanded {
+        max-height: 35vh;
+        max-height: 35dvh;
+    }
+
+    /* Main layout: vertical stack, map takes priority */
+    .airspace-page #main-area {
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Map: take remaining viewport — override style.css 800px rules */
+    .airspace-page #map-section {
+        flex: 1 !important;
+        height: auto !important;
+        min-height: 50vh;
+        min-height: 50dvh;
+        overflow: hidden;
+    }
+
+    /* Left panel (contacts): bottom sheet */
+    .airspace-page #panel-left {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        height: auto;
+        max-height: 50vh !important;
+        max-height: 50dvh !important;
+        flex: none !important;
+        z-index: 300;
+        border-right: none;
+        border-bottom: none !important;
+        border-top: 2px solid var(--accent, #4CAF50);
+        border-radius: 14px 14px 0 0;
+        background: var(--bg1, var(--bg-surface));
+        transform: translateY(calc(100% - 44px));
+        transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.4);
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        will-change: transform;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        overscroll-behavior: contain;
+    }
+    /* Peek mode: show just the header */
+    .airspace-page #panel-left .pl-hdr {
+        min-height: 44px;
+        padding: 10px 16px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: inherit;
+    }
+    /* Expanded state */
+    .airspace-page #panel-left.mobile-expanded {
+        transform: translateY(0);
+        overflow-y: auto;
+    }
+    /* Hidden state: fully off-screen */
+    .airspace-page #panel-left.hidden {
+        transform: translateY(100%);
+        opacity: 1;
+    }
+
+    /* Right panel (detail): full-height bottom sheet */
+    .airspace-page #panel-right {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        height: auto;
+        max-height: 55vh !important;
+        max-height: 55dvh !important;
+        flex: none !important;
+        z-index: 400;
+        border-left: none;
+        border-top: 2px solid var(--accent, #4CAF50);
+        border-radius: 14px 14px 0 0;
+        background: var(--bg1, var(--bg-surface));
+        transform: translateY(100%);
+        transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        will-change: transform;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        overscroll-behavior: contain;
+    }
+    /* Show detail when a contact is selected */
+    .airspace-page #panel-right.mobile-expanded {
+        transform: translateY(0);
+        overflow-y: auto;
+    }
+    /* Hidden state */
+    .airspace-page #panel-right.hidden {
+        transform: translateY(100%) !important;
+    }
+
+    /* Detail view: more breathing room on mobile */
+    .airspace-page #detail-view {
+        padding: 12px 16px;
+    }
+    .airspace-page .det-hdr {
+        margin-bottom: 12px;
+    }
+    .airspace-page .det-name {
+        font-size: 16px;
+    }
+    .airspace-page .det-close {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+    .airspace-page .det-gauges {
+        margin-bottom: 12px;
+    }
+    .airspace-page .gauge-svg,
+    .airspace-page .compass-svg {
+        width: 90px;
+        height: 90px;
+    }
+    .airspace-page .det-grid {
+        grid-template-columns: 1fr;
+    }
+    .airspace-page .det-row {
+        padding: 4px 0;
+        font-size: 13px;
+    }
+    .airspace-page .det-sec-t {
+        font-size: 11px;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+    }
+    .airspace-page .det-acts {
+        margin-top: 12px;
+        gap: 8px;
+    }
+    .airspace-page .det-btn {
+        min-height: 44px;
+        font-size: 12px;
+        padding: 10px 12px;
+    }
+
+    /* Pull handle indicator for bottom sheets */
+    .airspace-page #panel-left::before,
+    .airspace-page #panel-right::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: var(--border-hi, #3A5045);
+        border-radius: 2px;
+        margin: 8px auto 4px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    /* Contact cards: touch-friendly */
+    .airspace-page .uc {
+        margin-bottom: 8px;
+    }
+    .airspace-page .uc-head {
+        padding: 10px 12px;
+    }
+    .airspace-page .uc-name {
+        font-size: 14px;
+    }
+    .airspace-page .uc-r2 {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+    .airspace-page .uc-btn {
+        min-height: 36px;
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+    .airspace-page .fchip {
+        min-height: 32px;
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    .airspace-page .pl-search input {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 8px 12px;
+    }
+    .airspace-page .pl-sort select {
+        min-height: 36px;
+        font-size: 13px;
+    }
+
+    /* FAB for airspace tools */
+    .mobile-fab {
+        display: none;
+    }
+    .airspace-page .mobile-fab {
+        display: flex;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--accent, #4CAF50);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        align-items: center;
+        justify-content: center;
+        z-index: 500;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .mobile-fab:active {
+        transform: scale(0.92);
+    }
+    .mobile-fab svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* FAB menu */
+    .mobile-fab-menu {
+        display: none;
+        position: fixed;
+        bottom: 84px;
+        right: 20px;
+        z-index: 500;
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-end;
+    }
+    .mobile-fab-menu.open {
+        display: flex;
+    }
+    .fab-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg2, var(--bg-elevated, #12161a));
+        border: 1px solid var(--border, var(--border-default, #2a333e));
+        border-radius: 24px;
+        padding: 10px 16px;
+        color: var(--t0, var(--text-primary, #e8ecf0));
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        white-space: nowrap;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        -webkit-tap-highlight-color: transparent;
+        min-height: 44px;
+    }
+    .fab-menu-item:active {
+        background: var(--bg3, var(--bg-hover, #1a1f25));
+    }
+    .fab-menu-item svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+
+    /* ── LOGIN PAGE ── */
+    .login-card,
+    .auth-card {
+        width: 90vw !important;
+        max-width: 400px;
+        padding: 24px 20px;
+    }
+    .login-card input,
+    .auth-card input {
+        min-height: 48px;
+        font-size: 16px;
+    }
+    .login-card button,
+    .auth-card button,
+    .login-card [type="submit"],
+    .auth-card [type="submit"] {
+        min-height: 48px;
+        width: 100%;
+        font-size: 16px;
+    }
+
+    /* ── CARD PERFORMANCE ── */
+    /* Override style.css per-card GPU compositing to reduce layer count on mobile */
+    .airspace-page .uc {
+        will-change: auto !important;
+        contain: content !important;
+    }
+    .airspace-page .uc.selected {
+        will-change: auto !important;
+    }
+    .airspace-page .uav-list {
+        will-change: auto !important;
+    }
+
+    /* ── MODALS ON MOBILE ── */
+    /* Ensure modals render above bottom sheet panels */
+    .airspace-page #modal-bg {
+        z-index: 1000 !important;
+    }
+    .airspace-page .modal {
+        z-index: 1001 !important;
+    }
+
+    /* History modal: near full-screen on mobile */
+    .airspace-page #modal-history,
+    .airspace-page .modal.lg {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        max-height: 100vh;
+        max-height: 100dvh;
+        height: 100vh;
+        height: 100dvh;
+        border-radius: 0;
+        margin: 0;
+    }
+    .airspace-page #modal-history .m-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        max-height: calc(100dvh - 100px);
+        padding-bottom: 20px;
+    }
+    .airspace-page #hist-map {
+        height: 30vh !important;
+        height: 30dvh !important;
+        min-height: 140px;
+        max-height: 220px;
+    }
+    /* History replay controls: touch-friendly */
+    .airspace-page .hist-replay-row {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .airspace-page .hist-replay-btn {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 16px;
+    }
+    .airspace-page .hist-replay-timeline {
+        min-height: 44px;
+        cursor: pointer;
+    }
+    .airspace-page .hist-replay-speed {
+        min-height: 44px;
+        font-size: 14px;
+    }
+    .airspace-page .hist-replay-time {
+        font-size: 12px;
+        min-width: 90px;
+    }
+    .airspace-page .hist-replay-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .airspace-page .hist-stats {
+        flex-wrap: wrap;
+    }
+    .airspace-page .hist-stat {
+        min-width: 60px;
+    }
+    .airspace-page .hist-acts {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .airspace-page .hist-acts .mbtn {
+        min-height: 44px;
+        flex: 1;
+        min-width: 90px;
+    }
+    /* History chart: smaller on mobile */
+    .airspace-page #hist-canvas {
+        height: 80px !important;
+    }
+    /* Day selector touch-friendly */
+    .airspace-page #hist-day-select {
+        min-height: 44px;
+        font-size: 14px;
+        width: 100%;
+    }
+
+    /* ── SETTINGS MODAL ── */
+    .airspace-page #modal-settings .m-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+    .airspace-page .m-tabs {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .airspace-page .m-tab {
+        min-height: 40px;
+        font-size: 12px;
+    }
+    .airspace-page .mf select,
+    .airspace-page .mf input[type="range"] {
+        min-height: 44px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════
+   BREAKPOINT: 600px (small phones)
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+
+    /* Even tighter spacing */
+    #main {
+        padding: 0 12px 20px;
+    }
+    .section {
+        margin-bottom: 12px;
+    }
+
+    /* KPI cards: stack 1 column */
+    #kpi-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* Taps summary: 1 column */
+    #tap-summary {
+        grid-template-columns: 1fr;
+    }
+
+    /* Fleet summary: 2 col still works */
+    .summary-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    /* Smaller card padding */
+    .tap-detail-body {
+        padding: 10px 12px;
+    }
+    .tap-kpi {
+        padding: 14px 12px;
+    }
+    .tap-kpi-val {
+        font-size: 24px;
+    }
+
+    /* Header shrink */
+    #hdr .hdr-left h1 {
+        font-size: 16px;
+    }
+    .header-title {
+        font-size: 13px !important;
+    }
+    .header-clock {
+        display: none;
+    }
+
+    /* Threat level: compact */
+    .threat-level {
+        padding: 2px 8px;
+        font-size: 10px;
+    }
+
+    /* Drawer narrower */
+    #sidebar,
+    .sidebar {
+        width: 260px;
+        min-width: 260px;
+    }
+
+    /* FAB smaller */
+    .airspace-page .mobile-fab {
+        width: 50px;
+        height: 50px;
+        bottom: 16px;
+        right: 16px;
+    }
+    .mobile-fab-menu {
+        bottom: 74px;
+        right: 16px;
+    }
+
+    /* Airspace: tighter toolbar */
+    .airspace-page #toolbar {
+        height: 36px;
+    }
+    .airspace-page .tb-brand .tb-logo {
+        font-size: 12px;
+    }
+    .airspace-page .tb-back {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+    /* Gauges smaller on tiny screens */
+    .airspace-page .gauge-svg,
+    .airspace-page .compass-svg {
+        width: 70px;
+        height: 70px;
+    }
+    /* Detail view tighter */
+    .airspace-page #detail-view {
+        padding: 10px 12px;
+    }
+    .airspace-page .det-name {
+        font-size: 15px;
+    }
+    .airspace-page .det-row {
+        font-size: 12px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════
+   BREAKPOINT: 400px (very small phones)
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 400px) {
+    #main {
+        padding: 0 8px 16px;
+    }
+    .filter-bar {
+        padding: 8px 10px;
+    }
+    .filter-select {
+        font-size: 13px;
+    }
+    .summary-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════
+   BODY SCROLL LOCK (when drawer is open)
+   ═══════════════════════════════════════════════════════ */
+body.drawer-open {
+    overflow: hidden !important;
+    touch-action: none;
+}
+body.drawer-open #main,
+body.drawer-open .main-content {
+    pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SAFE AREA INSETS (notched phones)
+   ═══════════════════════════════════════════════════════ */
+@supports (padding: env(safe-area-inset-top)) {
+    @media (max-width: 900px) {
+        #hdr,
+        .header {
+            padding-top: env(safe-area-inset-top);
+        }
+        #sidebar,
+        .sidebar {
+            padding-top: env(safe-area-inset-top);
+        }
+        .mobile-fab {
+            bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+        .mobile-fab-menu {
+            bottom: calc(84px + env(safe-area-inset-bottom));
+        }
+    }
+}

@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skylens — Sign In</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<link rel="icon" type="image/svg+xml" href="/img/icon-192.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg0: #050808;
+    --bg1: #0A100F;
+    --bg2: #111916;
+    --bg3: #182220;
+    --border: #1A2A25;
+    --border-hi: #2A4035;
+    --t0: #E8F5E9;
+    --t1: #A5D6A7;
+    --t2: #6B9B74;
+    --t3: #4A7055;
+    --accent: #4CAF50;
+    --accent-hi: #66BB6A;
+    --accent-dim: rgba(76,175,80,0.15);
+    --critical: #FF1744;
+    --critical-dim: rgba(255,23,68,0.12);
+    --font: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    font-family: var(--font);
+    background: var(--bg0);
+    color: var(--t1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+/* Radar background */
+.radar-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 800px;
+    height: 800px;
+    pointer-events: none;
+}
+
+.radar-ring {
+    position: absolute;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.1;
+}
+
+.radar-ring:nth-child(1) { width: 200px; height: 200px; }
+.radar-ring:nth-child(2) { width: 400px; height: 400px; }
+.radar-ring:nth-child(3) { width: 600px; height: 600px; }
+.radar-ring:nth-child(4) { width: 800px; height: 800px; opacity: 0.05; }
+
+/* Radar sweep */
+.radar-sweep {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 400px;
+    height: 400px;
+    transform-origin: center center;
+    animation: sweep 4s linear infinite;
+}
+
+.radar-sweep::before {
+    content: '';
+    position: absolute;
+    width: 50%;
+    height: 50%;
+    top: 0;
+    right: 0;
+    background: conic-gradient(from 0deg at 0% 100%, transparent 0deg, rgba(76, 175, 80, 0.3) 30deg, transparent 60deg);
+    transform-origin: bottom left;
+}
+
+@keyframes sweep {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Radar crosshairs */
+.radar-cross {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.radar-cross::before,
+.radar-cross::after {
+    content: '';
+    position: absolute;
+    background: var(--accent);
+    opacity: 0.15;
+}
+
+.radar-cross::before {
+    width: 800px;
+    height: 1px;
+    top: 0;
+    left: -400px;
+}
+
+.radar-cross::after {
+    width: 1px;
+    height: 800px;
+    top: -400px;
+    left: 0;
+}
+
+/* Floating drone blips */
+.blip {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0;
+    animation: blipPulse 4s ease-out infinite;
+    box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+}
+
+.blip:nth-child(1) { top: 25%; left: 30%; animation-delay: 0.5s; }
+.blip:nth-child(2) { top: 60%; left: 70%; animation-delay: 1.2s; }
+.blip:nth-child(3) { top: 35%; left: 65%; animation-delay: 2.1s; }
+.blip:nth-child(4) { top: 70%; left: 25%; animation-delay: 2.8s; }
+.blip:nth-child(5) { top: 45%; left: 45%; animation-delay: 3.5s; }
+
+@keyframes blipPulse {
+    0% { opacity: 0; transform: scale(0.5); }
+    10% { opacity: 1; transform: scale(1); }
+    30% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1); }
+}
+
+/* Detected text that flashes */
+.detected-text {
+    position: fixed;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    opacity: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    animation: detectedFlash 4s ease-out infinite;
+}
+
+.detected-text:nth-of-type(1) { top: 22%; left: 28%; animation-delay: 0.7s; }
+.detected-text:nth-of-type(2) { top: 58%; left: 68%; animation-delay: 1.4s; }
+.detected-text:nth-of-type(3) { top: 33%; left: 63%; animation-delay: 2.3s; }
+
+@keyframes detectedFlash {
+    0% { opacity: 0; }
+    10% { opacity: 0.8; }
+    30% { opacity: 0.8; }
+    50% { opacity: 0; }
+    100% { opacity: 0; }
+}
+
+/* Login container */
+.login-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+}
+
+.login-card {
+    background: rgba(10, 16, 15, 0.95);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    box-shadow:
+        0 4px 40px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(76,175,80,0.1),
+        0 0 100px rgba(76,175,80,0.05);
+    backdrop-filter: blur(20px);
+    animation: cardFadeIn 0.6s ease-out;
+}
+
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Logo section */
+.login-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.logo-icon {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+/* Drone SVG icon */
+.drone-icon {
+    width: 80px;
+    height: 80px;
+    fill: var(--accent);
+    filter: drop-shadow(0 0 20px rgba(76,175,80,0.5));
+    animation: droneHover 3s ease-in-out infinite;
+}
+
+@keyframes droneHover {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Targeting reticle around drone */
+.reticle {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 100px;
+    height: 100px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: reticlePulse 2s ease-in-out infinite;
+}
+
+.reticle::before,
+.reticle::after {
+    content: '';
+    position: absolute;
+    background: var(--accent);
+}
+
+.reticle::before {
+    width: 12px;
+    height: 2px;
+    top: 50%;
+    left: -6px;
+    transform: translateY(-50%);
+}
+
+.reticle::after {
+    width: 12px;
+    height: 2px;
+    top: 50%;
+    right: -6px;
+    transform: translateY(-50%);
+}
+
+.reticle-v::before,
+.reticle-v::after {
+    content: '';
+    position: absolute;
+    background: var(--accent);
+    width: 2px;
+    height: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.reticle-v::before { top: -6px; }
+.reticle-v::after { bottom: -6px; }
+
+@keyframes reticlePulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.logo-text {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--t0);
+    letter-spacing: 6px;
+    text-shadow: 0 0 30px rgba(76,175,80,0.3);
+}
+
+/* Tagline */
+.tagline {
+    margin-top: 8px;
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.tagline-main {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    animation: taglinePulse 3s ease-in-out infinite;
+}
+
+@keyframes taglinePulse {
+    0%, 100% { opacity: 0.9; }
+    50% { opacity: 1; text-shadow: 0 0 20px rgba(76,175,80,0.5); }
+}
+
+.tagline-sub {
+    font-size: 11px;
+    color: var(--t3);
+    margin-top: 6px;
+    letter-spacing: 1px;
+}
+
+/* Form */
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t2);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--t0);
+    font-family: var(--font);
+    font-size: 15px;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim), 0 0 20px rgba(76,175,80,0.1);
+    background: var(--bg3);
+}
+
+.form-input::placeholder {
+    color: var(--t3);
+}
+
+/* Password toggle */
+.password-wrapper {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--t3);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--accent);
+}
+
+/* Remember me */
+.form-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.remember-me input {
+    display: none;
+}
+
+.remember-me .checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-hi);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.remember-me input:checked + .checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.remember-me .checkbox::after {
+    content: '\2713';
+    color: var(--bg0);
+    font-size: 12px;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.remember-me input:checked + .checkbox::after {
+    opacity: 1;
+}
+
+.remember-me span {
+    font-size: 13px;
+    color: var(--t2);
+}
+
+/* Submit button */
+.login-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--accent) 0%, #2E7D32 100%);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.login-btn:hover::before {
+    left: 100%;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(76,175,80,0.4);
+}
+
+.login-btn:active {
+    transform: translateY(0);
+}
+
+.login-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.login-btn .loading {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+.login-btn.loading-state .btn-text {
+    visibility: hidden;
+}
+
+.login-btn.loading-state .loading {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Error message */
+.error-message {
+    display: none;
+    background: var(--critical-dim);
+    border: 1px solid var(--critical);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--critical);
+    font-size: 13px;
+    animation: shake 0.3s ease-out;
+}
+
+.error-message.visible {
+    display: block;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+/* Footer */
+.login-footer {
+    text-align: center;
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.login-footer p {
+    font-size: 11px;
+    color: var(--t3);
+    letter-spacing: 1px;
+}
+
+/* Version badge */
+.version-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 10px;
+    color: var(--t3);
+    font-family: var(--mono);
+    opacity: 0.5;
+}
+
+/* Corner accents */
+.corner {
+    position: fixed;
+    width: 60px;
+    height: 60px;
+    border: 2px solid var(--accent);
+    opacity: 0.15;
+}
+
+.corner-tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+.corner-tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+.corner-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+.corner-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+
+/* Status line */
+.status-line {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    opacity: 0.4;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+</style>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Radar background -->
+<div class="radar-container">
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-cross"><div class="reticle-v"></div></div>
+    <div class="radar-sweep"></div>
+    <div class="blip"></div>
+    <div class="blip"></div>
+    <div class="blip"></div>
+    <div class="blip"></div>
+    <div class="blip"></div>
+</div>
+
+<span class="detected-text">DETECTED</span>
+<span class="detected-text">TRACKING</span>
+<span class="detected-text">ACQUIRED</span>
+
+<!-- Corner accents -->
+<div class="corner corner-tl"></div>
+<div class="corner corner-tr"></div>
+<div class="corner corner-bl"></div>
+<div class="corner corner-br"></div>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="logo-icon">
+                <div class="reticle"><div class="reticle-v"></div></div>
+                <svg class="drone-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Drone body -->
+                    <ellipse cx="32" cy="32" rx="10" ry="6"/>
+                    <!-- Arms -->
+                    <line x1="22" y1="26" x2="10" y2="14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="42" y1="26" x2="54" y2="14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="22" y1="38" x2="10" y2="50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="42" y1="38" x2="54" y2="50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                    <!-- Rotors -->
+                    <circle cx="10" cy="14" r="8" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+                    <circle cx="54" cy="14" r="8" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+                    <circle cx="10" cy="50" r="8" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+                    <circle cx="54" cy="50" r="8" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.6"/>
+                    <!-- Center eye -->
+                    <circle cx="32" cy="32" r="3" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="logo-text">SKYLENS</div>
+        </div>
+
+        <div class="tagline">
+            <div class="tagline-sub">Total Airspace Awareness</div>
+        </div>
+
+        <form class="login-form" id="login-form">
+            <div class="error-message" id="error-message"></div>
+
+            <div class="form-group">
+                <label class="form-label" for="username">Operator ID</label>
+                <input type="text" id="username" name="username" class="form-input"
+                       placeholder="Enter your operator ID" autocomplete="username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Access Code</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" class="form-input"
+                           placeholder="Enter your access code" autocomplete="current-password" required>
+                    <button type="button" class="password-toggle" id="password-toggle" title="Show password">
+                        <span id="toggle-icon">&#128065;</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox" id="remember" name="remember">
+                    <span class="checkbox"></span>
+                    <span>Remember station</span>
+                </label>
+            </div>
+
+            <button type="submit" class="login-btn" id="login-btn">
+                <span class="btn-text">Authenticate</span>
+                <span class="loading"></span>
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<div class="status-line">
+    <span class="status-dot"></span>
+    <span>SYSTEM ONLINE</span>
+</div>
+
+<div class="version-badge" id="version">v0.1.0</div>
+
+<script>
+(function() {
+    const form = document.getElementById('login-form');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const rememberInput = document.getElementById('remember');
+    const loginBtn = document.getElementById('login-btn');
+    const errorMessage = document.getElementById('error-message');
+    const passwordToggle = document.getElementById('password-toggle');
+    const toggleIcon = document.getElementById('toggle-icon');
+
+    // Check if already authenticated
+    checkAuth();
+
+    // Password visibility toggle
+    passwordToggle.addEventListener('click', function() {
+        const type = passwordInput.type === 'password' ? 'text' : 'password';
+        passwordInput.type = type;
+        toggleIcon.innerHTML = type === 'password' ? '&#128065;' : '&#128064;';
+    });
+
+    // Form submit
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        hideError();
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+        const rememberMe = rememberInput.checked;
+
+        if (!username || !password) {
+            showError('Enter operator credentials to continue');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    remember_me: rememberMe
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Authentication failed');
+            }
+
+            // Store user info in localStorage for quick access
+            localStorage.setItem('skylens_user', JSON.stringify(data.user));
+
+            // Redirect to dashboard
+            const returnUrl = getReturnUrl();
+            window.location.href = returnUrl;
+
+        } catch (err) {
+            showError(err.message);
+            setLoading(false);
+            passwordInput.focus();
+            passwordInput.select();
+        }
+    });
+
+    function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add('visible');
+    }
+
+    function hideError() {
+        errorMessage.classList.remove('visible');
+    }
+
+    function setLoading(loading) {
+        if (loading) {
+            loginBtn.classList.add('loading-state');
+            loginBtn.disabled = true;
+        } else {
+            loginBtn.classList.remove('loading-state');
+            loginBtn.disabled = false;
+        }
+    }
+
+    function getReturnUrl() {
+        const params = new URLSearchParams(window.location.search);
+        let returnUrl = params.get('return') || params.get('redirect') || '/';
+        if (returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+            if (returnUrl === '/login' || returnUrl === '/login.html' || returnUrl.startsWith('/login?')) {
+                return '/';
+            }
+            return returnUrl;
+        }
+        return '/';
+    }
+
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/auth/me', {
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.user && data.user.id && data.user.id !== 0) {
+                    window.location.href = getReturnUrl();
+                }
+            }
+        } catch (e) {
+            // Not authenticated, stay on login page
+        }
+    }
+
+    // Load version
+    fetch('/api/health')
+        .then(r => r.json())
+        .then(data => {
+            if (data.version) {
+                document.getElementById('version').textContent = 'v' + data.version;
+            }
+        })
+        .catch(() => {});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — Dashboard</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SKYLENS">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="/img/icon-192.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/components.css">
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item active">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+      <span class="sb-badge" id="sb-badge-fleet"></span>
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+      <span class="sb-badge" id="sb-badge-alerts"></span>
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div id="user-menu-container"></div>
+    <div class="sb-version" id="sb-version">v0.1.0</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+
+  <!-- Header Bar -->
+  <header id="hdr">
+    <div class="hdr-left">
+      <h1>Dashboard</h1>
+      <span class="hdr-node" id="hdr-node"></span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-stale" id="hdr-stale" title="Data may be outdated">STALE</span>
+      <button class="hdr-audio-btn" id="hdr-audio-btn" title="Toggle audio alerts">AUDIO OFF</button>
+      <button class="hdr-settings-btn" id="hdr-settings-btn" title="Settings">&#9881;</button>
+      <span class="hdr-conn" id="hdr-conn">
+        <span class="hdr-dot green"></span> Connected
+      </span>
+      <span class="hdr-uptime" id="hdr-uptime"></span>
+      <span class="hdr-clock" id="hdr-clock"></span>
+    </div>
+  </header>
+
+  <!-- Threat Level Banner -->
+  <div id="threat-banner" class="threat-banner threat-clear">
+    <div class="threat-left">
+      <div class="threat-level-label">AIRSPACE STATUS</div>
+      <div class="threat-level-value" id="threat-level">0</div>
+    </div>
+    <div class="threat-detail" id="threat-detail">All clear — no active contacts</div>
+  </div>
+
+  <!-- KPI Cards (only what matters) -->
+  <div id="kpi-row">
+    <div class="kpi" id="kpi-uavs">
+      <div class="kpi-val">0</div>
+      <div class="kpi-label">UAVs in Airspace</div>
+    </div>
+    <div class="kpi" id="kpi-sensors">
+      <div class="kpi-val">0 / 0</div>
+      <div class="kpi-label">Sensors Online</div>
+    </div>
+    <div class="kpi" id="kpi-pending">
+      <div class="kpi-val">0</div>
+      <div class="kpi-label">Pending Alerts</div>
+    </div>
+    <div class="kpi" id="kpi-spoof">
+      <div class="kpi-val">0</div>
+      <div class="kpi-label">Spoof Suspects</div>
+    </div>
+    <div class="kpi" id="kpi-health">
+      <div class="kpi-val">OK</div>
+      <div class="kpi-label">System Health</div>
+    </div>
+  </div>
+
+  <!-- Main Content: Map + Active Contacts -->
+  <div id="split-row">
+
+    <!-- Airspace Map -->
+    <section class="section split-left">
+      <div class="sec-head">
+        <h2>Airspace</h2>
+        <a href="/airspace" class="link-btn">Full Map &#8594;</a>
+      </div>
+      <div id="minimap"></div>
+    </section>
+
+    <!-- Active Contacts -->
+    <section class="section split-right">
+      <div class="sec-head">
+        <h2>Active Contacts</h2>
+        <span class="badge" id="contact-badge">0</span>
+        <input class="ct-search" id="ct-search" type="text" placeholder="Filter..." autocomplete="off" spellcheck="false">
+      </div>
+      <div id="contacts-list">
+        <div class="empty-state" id="contacts-empty">No contacts — airspace clear</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Recent Alerts -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>Recent Alerts</h2>
+      <span class="badge" id="alert-badge">0</span>
+      <button class="ack-all-btn" id="ack-all-btn" title="Acknowledge all alerts">ACK ALL</button>
+      <button class="ack-all-btn" id="clear-alerts-btn" title="Delete all alerts" style="border-color:var(--critical);color:var(--critical)">CLEAR</button>
+      <a href="/alerts" class="link-btn" style="margin-left:auto">All Alerts &#8594;</a>
+    </div>
+    <div class="tbl-wrap">
+      <table id="alert-tbl">
+        <thead>
+          <tr>
+            <th style="width:80px">Priority</th>
+            <th style="width:140px">Type</th>
+            <th style="width:120px">UAV</th>
+            <th>Details</th>
+            <th style="width:50px">Ack</th>
+            <th style="width:80px">Time</th>
+          </tr>
+        </thead>
+        <tbody id="alert-body"></tbody>
+      </table>
+      <div class="empty-state" id="alert-empty">No alerts — airspace clear</div>
+    </div>
+  </section>
+
+  <!-- Sensor Network Strip -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>Sensor Network</h2>
+      <a href="/taps" class="link-btn">Manage Taps &#8594;</a>
+    </div>
+    <div id="sensor-strip">
+      <div class="empty-state" id="sensors-empty">No sensors connected</div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="modal" style="display:none">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Settings</h3>
+      <button class="modal-close" id="settings-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Node Info Section -->
+      <div class="settings-section">
+        <h4>Node Information</h4>
+        <div class="settings-row">
+          <span class="settings-label">Node Name:</span>
+          <span id="settings-node-name" class="mono"></span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Node UUID:</span>
+          <span id="settings-node-uuid" class="mono" style="font-size:11px"></span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">ZMQ Port:</span>
+          <span id="settings-zmq-port" class="mono"></span>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">Version:</span>
+          <span id="settings-version" class="mono"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/js/threat-board.js"></script>
+<script src="/js/trust-gauge.js"></script>
+<script src="/js/tap-health-matrix.js"></script>
+<script src="/js/pipeline-latency.js"></script>
+<script src="/js/tactical-display.js"></script>
+<script src="/js/mgrs.js"></script>
+<script src="/js/range-rings.js"></script>
+<script src="/js/activity-heatmap.js"></script>
+<script src="/js/decision-support.js"></script>
+<script src="/js/dashboard.js?v=20260210d"></script>
+<script>
+// Register Service Worker for PWA support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(function(registration) {
+        console.log('SKYLENS: Service Worker registered', registration.scope);
+
+        // Check for updates
+        registration.addEventListener('updatefound', function() {
+          var newWorker = registration.installing;
+          newWorker.addEventListener('statechange', function() {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available
+              console.log('SKYLENS: New version available');
+              if (confirm('A new version of SKYLENS is available. Reload to update?')) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            }
+          });
+        });
+      })
+      .catch(function(error) {
+        console.warn('SKYLENS: Service Worker registration failed', error);
+      });
+
+    // Listen for controller change (new SW activated)
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      console.log('SKYLENS: New Service Worker activated');
+    });
+  });
+}
+
+// Cache drone state periodically for offline viewing
+setInterval(function() {
+  if (navigator.serviceWorker.controller && window.Dashboard && window.Dashboard.state) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'CACHE_DRONE_STATE',
+      state: {
+        stats: window.Dashboard.state.stats,
+        uavs: window.Dashboard.state.uavs,
+        taps: window.Dashboard.state.taps,
+        alerts: window.Dashboard.state.alerts,
+        uptime: window.Dashboard.state.uptime
+      }
+    });
+  }
+}, 30000); // Every 30 seconds
+</script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

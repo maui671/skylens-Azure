@@ -1,0 +1,50 @@
+# Skylens Node Configuration
+# Copy to config.yaml and edit with your settings
+
+server:
+  http_port: 8080
+  websocket_port: 8081
+  # allowed_origins: ["*"]
+
+nats:
+  url: "nats://localhost:4222"
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "skylens"
+  user: "skylens"
+  password: ""           # Set your PostgreSQL password
+  ssl_mode: "disable"
+
+redis:
+  url: "redis://localhost:6379"
+
+detection:
+  lost_threshold_sec: 300
+  trust_decay_rate: 0.1
+  max_history_hours: 8760          # 1 year
+  max_displayed_drones: 500
+  spoof_check_enabled: true
+
+  # Single-TAP Mode: Enable promotion of suspects without multi-TAP correlation
+  # Set to true when running with limited TAP coverage
+  single_tap_mode: true
+  single_tap_min_observations: 5   # Min observations before auto-promotion
+  single_tap_min_time_span_sec: 30 # Min time window for observations
+  single_tap_min_mobility: 0.5     # Mobility score threshold (0.0-1.0)
+
+# RF Propagation Model Configuration
+propagation:
+  # Global environment type for all TAPs (unless overridden per-tap)
+  # Options: open_field, suburban, urban, dense_urban, indoor
+  global_environment: "suburban"
+
+  # Per-tap environment overrides (optional)
+  tap_environments:
+    # tap-001: "urban"
+    # tap-002: "open_field"
+
+auth:
+  enabled: true
+  jwt_secret: ""         # Set via SKYLENS_JWT_SECRET env var or generate with: openssl rand -base64 32

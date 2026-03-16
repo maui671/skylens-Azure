@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skylens — Taps</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SKYLENS">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="/img/icon-192.svg">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/components.css">
+<style>
+/* ─── TAPS PAGE ─── */
+
+/* Summary KPI row */
+#tap-summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.tap-kpi {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px 16px;
+    text-align: center;
+    transition: border-color .2s;
+}
+.tap-kpi:hover { border-color: var(--border-hi); }
+.tap-kpi-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--t0);
+    font-family: var(--mono);
+    letter-spacing: -1px;
+    line-height: 1;
+}
+.tap-kpi-label {
+    font-size: 11px;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+}
+
+/* Tap detail card grid */
+#tap-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 12px;
+}
+
+/* Individual tap detail card */
+.tap-detail-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+    transition: border-color .2s;
+}
+.tap-detail-card:hover { border-color: var(--border-hi); }
+
+/* Health bar at top of each card */
+.tap-health-bar {
+    height: 3px;
+    width: 100%;
+    transition: background .4s ease;
+}
+.tap-health-bar.good { background: var(--safe); }
+.tap-health-bar.warn { background: var(--warning); }
+.tap-health-bar.critical { background: var(--critical); }
+
+/* Card inner body */
+.tap-detail-body {
+    padding: 14px 16px 12px;
+}
+
+/* Card header row */
+.tap-detail-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+.tap-detail-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--t0);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.tap-detail-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.tap-detail-dot.live {
+    background: var(--safe);
+    box-shadow: 0 0 6px var(--safe);
+}
+.tap-detail-dot.stale {
+    background: var(--critical);
+    box-shadow: 0 0 6px var(--critical);
+}
+.tap-detail-ver {
+    font-size: 10px;
+    color: var(--t3);
+    font-family: var(--mono);
+    background: var(--bg3);
+    padding: 2px 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+/* UUID + heartbeat age meta row */
+.tap-detail-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 10px;
+}
+.tap-detail-uuid {
+    color: var(--t3);
+    font-family: var(--mono);
+    cursor: default;
+}
+.tap-detail-age {
+    font-family: var(--mono);
+}
+.tap-detail-age.good { color: var(--safe); }
+.tap-detail-age.warn { color: var(--warning); }
+.tap-detail-age.bad  { color: var(--critical); }
+
+/* Two-column section layout */
+.tap-detail-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 20px;
+}
+
+/* Section within card */
+.tap-detail-section {
+    margin-bottom: 8px;
+}
+.tap-detail-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Field rows inside sections */
+.tap-detail-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    padding: 3px 0;
+}
+.tap-detail-field-label {
+    color: var(--t3);
+}
+.tap-detail-field-val {
+    color: var(--t1);
+    font-family: var(--mono);
+    text-align: right;
+}
+.tap-detail-field-val.good { color: var(--safe); }
+.tap-detail-field-val.bad { color: var(--critical); }
+.tap-detail-field-val.warn { color: var(--warning); }
+
+/* Channels row */
+.tap-detail-channels {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 11px;
+    gap: 12px;
+}
+.tap-detail-channels-label {
+    color: var(--t3);
+    flex-shrink: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding-top: 1px;
+}
+.tap-detail-channels-val {
+    color: var(--t1);
+    font-family: var(--mono);
+    text-align: right;
+    word-break: break-word;
+    line-height: 1.5;
+}
+
+/* Location row at bottom */
+.tap-detail-location {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+}
+.tap-detail-location-label {
+    color: var(--t3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tap-detail-location-val {
+    color: var(--t1);
+    font-family: var(--mono);
+}
+.tap-detail-location-val.none {
+    color: var(--t3);
+    font-style: italic;
+    font-family: var(--font);
+}
+
+/* Tap command buttons */
+.tap-detail-actions {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.tap-cmd-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg3);
+    color: var(--t1);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.tap-cmd-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.tap-cmd-btn:active {
+    transform: scale(0.98);
+}
+.tap-cmd-btn.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+.tap-cmd-btn.success {
+    border-color: var(--safe);
+    color: var(--safe);
+}
+.tap-cmd-btn.error {
+    border-color: var(--critical);
+    color: var(--critical);
+}
+.tap-cmd-btn.danger {
+    border-color: var(--critical);
+    color: var(--critical);
+}
+.tap-cmd-btn.danger:hover {
+    background: var(--critical);
+    color: #fff;
+}
+
+/* Channel config modal */
+.tap-channel-config {
+    display: none;
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg3);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+.tap-channel-config.open {
+    display: block;
+}
+.tap-channel-config label {
+    display: block;
+    font-size: 11px;
+    color: var(--t2);
+    margin-bottom: 4px;
+}
+.tap-channel-input {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--t1);
+    margin-bottom: 8px;
+}
+.tap-channel-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.tap-channel-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* ─── TAP CONFIG MODAL ─── */
+.tap-modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.60); z-index: 1000;
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    display: none;
+}
+.tap-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: var(--bg1); border: 1px solid var(--border); border-radius: 10px;
+    z-index: 1001; min-width: 380px; max-width: 500px; width: 90vw;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+    display: none; flex-direction: column; max-height: 80vh;
+}
+.tap-modal.open, .tap-modal-bg.open { display: flex; }
+.tap-modal-bg.open { display: block; }
+.tm-hdr {
+    display: flex; align-items: center; padding: 12px 16px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.tm-title { font-weight: 600; font-size: 14px; color: var(--t0); }
+.tm-sub { font-size: 11px; color: var(--t3); margin-left: 8px; font-family: var(--mono); }
+.tm-x {
+    margin-left: auto; background: none; border: none; color: var(--t3); font-size: 16px;
+    cursor: pointer; padding: 2px 8px; line-height: 1;
+}
+.tm-x:hover { color: var(--critical); }
+.tm-body { padding: 14px 16px; overflow-y: auto; flex: 1; }
+.tm-foot {
+    display: flex; gap: 8px; justify-content: flex-end; padding: 10px 16px;
+    border-top: 1px solid var(--border);
+}
+.tm-field {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.tm-field:last-child { border-bottom: none; }
+.tm-field label { color: var(--t2); font-weight: 500; white-space: nowrap; }
+.tm-field input[type="text"],
+.tm-field select {
+    background: var(--bg2); border: 1px solid var(--border); color: var(--t0);
+    padding: 5px 8px; border-radius: 4px; font-size: 12px; font-family: var(--mono);
+    outline: none; flex: 1; max-width: 220px;
+}
+.tm-field input[type="text"]:focus,
+.tm-field select:focus { border-color: var(--accent); }
+.tm-field input[type="range"] { flex: 1; accent-color: var(--accent); max-width: 160px; }
+.tm-field output {
+    color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600;
+    min-width: 40px; text-align: right; font-size: 12px; font-family: var(--mono);
+}
+.tm-field input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+.tm-field-hint {
+    font-size: 10px; color: var(--t3); margin-top: 2px; margin-bottom: 4px;
+}
+.tm-btn {
+    background: var(--bg2); border: 1px solid var(--border); color: var(--t2);
+    font-size: 11px; font-weight: 600; padding: 7px 16px;
+    border-radius: 4px; cursor: pointer; font-family: var(--font);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+.tm-btn:hover { color: var(--t0); border-color: var(--border-hi); }
+.tm-btn.primary { background: var(--accent-a, rgba(0,212,255,0.1)); color: var(--accent); border-color: var(--accent); }
+.tm-btn.primary:hover { opacity: 0.85; }
+.tm-btn.saving { opacity: 0.6; pointer-events: none; }
+.tm-section-title {
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-top: 12px; margin-bottom: 4px; padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+.tm-section-title:first-child { margin-top: 0; }
+
+/* Command result toast */
+.tap-cmd-result {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+}
+.tap-cmd-result.success {
+    background: var(--safe);
+    color: #fff;
+}
+.tap-cmd-result.error {
+    background: var(--critical);
+    color: #fff;
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Empty state */
+.tap-empty-state {
+    text-align: center;
+    padding: 60px 16px;
+    color: var(--t3);
+    font-size: 14px;
+    background: var(--bg2);
+    border: 1px dashed var(--border);
+    border-radius: var(--r);
+}
+.tap-empty-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    opacity: 0.4;
+}
+.tap-empty-sub {
+    font-size: 11px;
+    color: var(--t3);
+    margin-top: 6px;
+    opacity: 0.7;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1200px) {
+    #tap-summary { grid-template-columns: repeat(3, 1fr); }
+    #tap-detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+    #tap-summary { grid-template-columns: repeat(2, 1fr); }
+    #tap-detail-grid { grid-template-columns: 1fr; }
+    .tap-detail-sections { grid-template-columns: 1fr; }
+    :root { --sidebar-w: 160px; }
+}
+@media (max-width: 520px) {
+    #tap-summary { grid-template-columns: 1fr; }
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+      <span class="sb-badge" id="sb-badge-fleet"></span>
+    </a>
+    <a href="/taps" class="sb-item active">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+      <span class="sb-badge" id="sb-badge-alerts"></span>
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div id="user-menu-container"></div>
+    <div class="sb-version">v0.1.0</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+
+  <!-- Header Bar -->
+  <header id="hdr">
+    <div class="hdr-left">
+      <h1>Tap Management</h1>
+      <span class="hdr-node" id="hdr-node"></span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-conn" id="hdr-conn">
+        <span class="hdr-dot green"></span> Connected
+      </span>
+      <span class="hdr-uptime" id="hdr-uptime"></span>
+      <span class="hdr-clock" id="hdr-clock"></span>
+    </div>
+  </header>
+
+  <!-- Summary Row -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>Overview</h2>
+    </div>
+    <div id="tap-summary">
+      <div class="tap-kpi">
+        <div class="tap-kpi-val" id="kpi-total-taps">0</div>
+        <div class="tap-kpi-label">Total Taps</div>
+      </div>
+      <div class="tap-kpi">
+        <div class="tap-kpi-val" id="kpi-online-taps">0</div>
+        <div class="tap-kpi-label">Online</div>
+      </div>
+      <div class="tap-kpi">
+        <div class="tap-kpi-val" id="kpi-total-frames">0</div>
+        <div class="tap-kpi-label">Total Frames</div>
+      </div>
+      <div class="tap-kpi">
+        <div class="tap-kpi-val" id="kpi-avg-parse">--</div>
+        <div class="tap-kpi-label">Detections Sent</div>
+      </div>
+      <div class="tap-kpi">
+        <div class="tap-kpi-val" id="kpi-total-errors">0</div>
+        <div class="tap-kpi-label">Packets/Sec</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tap Detail Cards -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>Connected Taps</h2>
+      <span class="badge" id="tap-count-badge">0</span>
+    </div>
+    <div id="tap-detail-grid"></div>
+    <div class="tap-empty-state" id="tap-empty">
+      <div class="tap-empty-icon">&#9673;</div>
+      No taps connected &mdash; waiting for tap heartbeats
+      <div class="tap-empty-sub">Taps will appear here once they begin sending data to this node.</div>
+    </div>
+  </section>
+
+</main>
+
+<!-- TAP Config Modal -->
+<div class="tap-modal-bg" id="tap-config-bg"></div>
+<div class="tap-modal" id="tap-config-modal">
+  <div class="tm-hdr">
+    <span class="tm-title">TAP Configuration</span>
+    <span class="tm-sub" id="tap-config-name"></span>
+    <button class="tm-x" onclick="closeTapConfig()">&times;</button>
+  </div>
+  <div class="tm-body">
+    <div class="tm-section-title">WiFi Capture</div>
+    <div class="tm-field">
+      <label>Channels</label>
+      <input type="text" id="cfg-channels" placeholder="1,6,11,36,40,44,48">
+    </div>
+    <div class="tm-field-hint">Comma-separated channel numbers (e.g. 1,6,11,36,40,44,48)</div>
+    <div class="tm-field">
+      <label>Hop Interval</label>
+      <input type="range" id="cfg-hop" min="50" max="1000" step="50" value="200"
+             oninput="document.getElementById('cfg-hop-val').textContent=this.value+'ms'">
+      <output id="cfg-hop-val">200ms</output>
+    </div>
+
+    <div class="tm-section-title">Scanning</div>
+    <div class="tm-field">
+      <label>BLE Scanning</label>
+      <input type="checkbox" id="cfg-ble">
+    </div>
+
+    <div class="tm-section-title">System</div>
+    <div class="tm-field">
+      <label>Log Level</label>
+      <select id="cfg-loglevel">
+        <option value="debug">debug</option>
+        <option value="info" selected>info</option>
+        <option value="warn">warn</option>
+        <option value="error">error</option>
+      </select>
+    </div>
+  </div>
+  <div class="tm-foot">
+    <button class="tm-btn" onclick="closeTapConfig()">Cancel</button>
+    <button class="tm-btn primary" id="cfg-save-btn" onclick="saveTapConfig()">Save</button>
+  </div>
+</div>
+
+<script src="/js/tap-health-matrix.js"></script>
+<script src="/js/pipeline-latency.js"></script>
+<script src="/js/mgrs.js"></script>
+<script src="/js/taps-page.js"></script>
+<script>
+// Register Service Worker for PWA support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(function(registration) {
+        console.log('SKYLENS: Service Worker registered', registration.scope);
+      })
+      .catch(function(error) {
+        console.warn('SKYLENS: Service Worker registration failed', error);
+      });
+  });
+}
+</script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

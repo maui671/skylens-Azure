@@ -1,0 +1,46 @@
+[tap]
+id = "tap-001"
+name = "Tap 1"
+latitude = 18.253187
+longitude = -65.644547
+
+[capture]
+interface = "wlan1"
+# Full channel list: 2.4GHz (1-11) + 5GHz UNII-1 (36-48) + DFS (52-144) + UNII-3 (149-165)
+# ch144 completes the 132-144 80MHz block, eliminating the gap between DFS and UNII-3
+channels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165]
+hop_interval_ms = 200
+# rtw88 mac80211 driver — nl80211 should work properly, no need for iw fallback
+force_iw = false
+# MAC addresses to suppress (known false positive sources)
+# Format: "AA:BB:CC:DD:EE:FF" — add persistent FP MACs here after field observation
+mac_denylist = []
+# tshark removed — MT7921U receives all frames natively (including NAN Category 4)
+tshark = false
+dedup_interval_ms = 1000
+# Widest-first channel width hopping: 80 MHz on 5 GHz covers 4 channels per hop
+# Reduces ~24 5GHz hops to ~6, giving ~3-4s full cycle vs 7s at 20 MHz
+# Falls back to 40→20 MHz automatically if driver doesn't support wider widths
+channel_width_hopping = true
+
+[nats]
+url = "nats://100.73.32.29:4222"
+reconnect_interval_ms = 1000
+
+# Reliable message delivery buffer configuration
+# Buffers detections when NATS is disconnected and retries with exponential backoff
+[nats.buffer]
+max_size = 10000              # Maximum detections to buffer (oldest dropped when full)
+max_retries = 100             # Max retry attempts before dropping a detection
+initial_retry_delay_ms = 1000 # Initial retry delay (doubles each attempt)
+max_retry_delay_ms = 30000    # Maximum retry delay (caps exponential backoff)
+warning_threshold = 0.8       # Log warning when buffer is 80% full
+
+[ble]
+# BLE scanning for OpenDroneID (ASTM F3411) — uses Pi 5 built-in BCM43455 BLE 5.0
+# Requires: sudo systemctl enable --now bluetooth
+enabled = true
+adapter = "hci0"
+
+[logging]
+level = "info"

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/png" href="/img/icon-192.png">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — Fleet</title>
+<link rel="stylesheet" href="/css/dashboard.css">
+<style>
+/* --- FLEET PAGE ADDITIONS --- */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: 16px;
+}
+.filter-search {
+    font-size: 12px;
+    font-family: var(--font);
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--t1);
+    outline: none;
+    flex: 1;
+    min-width: 180px;
+}
+.filter-search::placeholder { color: var(--t3); }
+.filter-search:focus { border-color: var(--accent); }
+.filter-select {
+    font-size: 12px;
+    font-family: var(--font);
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--t1);
+    cursor: pointer;
+    outline: none;
+    min-width: 130px;
+}
+.filter-select:focus { border-color: var(--accent); }
+.filter-select option {
+    background: var(--bg2);
+    color: var(--t1);
+}
+.filter-label {
+    font-size: 11px;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* --- SUMMARY ROW --- */
+.summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.summary-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px;
+    text-align: center;
+    transition: border-color .2s;
+}
+.summary-card:hover { border-color: var(--border-hi); }
+.summary-card.accent-border { border-left: 3px solid var(--accent); }
+.summary-card.safe-border { border-left: 3px solid var(--safe); }
+.summary-card.info-border { border-left: 3px solid var(--info); }
+.summary-card.warn-border { border-left: 3px solid var(--warning); }
+.summary-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--t0);
+    font-family: var(--mono);
+    letter-spacing: -1px;
+    line-height: 1;
+}
+.summary-label {
+    font-size: 11px;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+}
+
+/* --- UAV CARD GRID --- */
+#fleet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
+    gap: 12px;
+}
+.uav-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 0;
+    transition: border-color .2s, box-shadow .2s;
+    overflow: hidden;
+    min-width: 0; /* Prevents flex children from overflowing */
+}
+.uav-card:hover {
+    border-color: var(--border-hi);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+.uav-card.airborne-border { border-left: 3px solid var(--safe); }
+.uav-card.grounded-border { border-left: 3px solid var(--caution); }
+.uav-card.lost-border { border-left: 3px solid var(--critical); }
+
+.uav-card-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    overflow: hidden;
+    min-width: 0;
+}
+.uav-card-id {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+.uav-status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.uav-status-dot.airborne {
+    background: var(--safe);
+    box-shadow: 0 0 7px var(--safe);
+}
+.uav-status-dot.grounded {
+    background: var(--caution);
+    box-shadow: 0 0 7px var(--caution);
+}
+.uav-status-dot.lost {
+    background: var(--critical);
+    box-shadow: 0 0 7px var(--critical);
+    animation: pulse-dot 1.5s infinite;
+}
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+.uav-designation {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--t0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.uav-ident {
+    font-size: 10px;
+    color: var(--t3);
+    font-family: var(--mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.uav-class-tag {
+    margin-left: 6px;
+    font-size: 9px;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Trust badge + bar */
+.uav-trust-wrap {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+.uav-trust-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+.uav-trust-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--bg1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.uav-trust-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Status ribbon */
+.uav-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+.uav-ribbon-status {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+.uav-ribbon-status.airborne {
+    background: var(--safe-dim, rgba(0,230,118,0.10));
+    color: var(--safe);
+}
+.uav-ribbon-status.grounded {
+    background: rgba(255,179,0,0.10);
+    color: var(--caution);
+}
+.uav-ribbon-status.lost {
+    background: var(--critical-dim, rgba(255,23,68,0.12));
+    color: var(--critical);
+}
+.uav-ribbon-tag {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background: var(--bg3);
+    color: var(--t2);
+}
+.uav-ribbon-tag.bad {
+    background: var(--critical-dim, rgba(255,23,68,0.12));
+    color: var(--critical);
+}
+.uav-ribbon-tag.good {
+    background: var(--safe-dim, rgba(0,230,118,0.10));
+    color: var(--safe);
+}
+
+/* Source badges */
+.uav-source-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+.uav-source-badge.src-remoteid {
+    background: var(--info-dim, rgba(0,176,255,0.10));
+    color: var(--info);
+}
+.uav-source-badge.src-dji {
+    background: rgba(156,39,176,0.10);
+    color: #CE93D8;
+}
+.uav-source-badge.src-wifi {
+    background: rgba(255,179,0,0.10);
+    color: var(--caution);
+}
+.uav-source-badge.src-ble {
+    background: rgba(0,150,255,0.10);
+    color: #42A5F5;
+}
+.uav-source-badge.src-test {
+    background: rgba(76,175,80,0.10);
+    color: var(--accent);
+}
+.uav-source-badge.src-default {
+    background: var(--bg3);
+    color: var(--t2);
+}
+
+.uav-card-body {
+    padding: 12px 16px 14px;
+    overflow: hidden;
+}
+.uav-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px 0;
+    overflow: hidden;
+}
+.uav-card-divider {
+    grid-column: 1 / -1;
+    height: 1px;
+    background: var(--border);
+    margin: 6px 0;
+}
+.uav-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    padding: 2px 0;
+    min-width: 0;
+    overflow: hidden;
+}
+.uav-field-label {
+    color: var(--t3);
+    white-space: nowrap;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+.uav-field-val {
+    color: var(--t1);
+    font-family: var(--mono);
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+}
+.uav-field-val.good { color: var(--safe); }
+.uav-field-val.bad { color: var(--critical); }
+.uav-field-val.warn { color: var(--warning); }
+
+/* Fingerprint and spoof detail rows */
+.uav-fp-reasons,
+.uav-spoof-detail {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* --- EMPTY STATE --- */
+.fleet-empty {
+    text-align: center;
+    padding: 60px 16px;
+    color: var(--t3);
+    font-size: 14px;
+}
+.fleet-empty-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+}
+.fleet-empty-text {
+    font-size: 14px;
+    color: var(--t3);
+    margin-bottom: 4px;
+}
+.fleet-empty-sub {
+    font-size: 11px;
+    color: var(--t3);
+    opacity: 0.6;
+}
+
+/* --- BADGE --- */
+.badge {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--bg3);
+    color: var(--t2);
+    letter-spacing: 0.3px;
+}
+.badge.warn {
+    background: var(--warning-dim, rgba(255,109,0,0.10));
+    color: var(--warning);
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 1200px) {
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+    #fleet-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+}
+@media (max-width: 900px) {
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+    #fleet-grid { grid-template-columns: 1fr; }
+    .filter-bar { gap: 8px; }
+    :root { --sidebar-w: 160px; }
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item active">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+      <span class="sb-badge" id="sb-badge-fleet"></span>
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+      <span class="sb-badge" id="sb-badge-alerts"></span>
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div id="user-menu-container"></div>
+    <div class="sb-version">v0.1.0</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+
+  <!-- Header Bar -->
+  <header id="hdr">
+    <div class="hdr-left">
+      <h1>UAV Fleet</h1>
+      <span class="hdr-node" id="hdr-node"></span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-conn" id="hdr-conn">
+        <span class="hdr-dot green"></span> Connected
+      </span>
+      <span class="hdr-uptime" id="hdr-uptime"></span>
+      <span class="hdr-clock" id="hdr-clock"></span>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <section class="section">
+    <div class="filter-bar">
+      <input class="filter-search" id="filter-search" type="text"
+             placeholder="Search UAVs (ID, designation, serial, MAC, operator...)">
+      <span class="filter-label">Status</span>
+      <select class="filter-select" id="filter-status">
+        <option value="">All</option>
+        <option value="airborne">Airborne</option>
+        <option value="grounded">Grounded</option>
+        <option value="lost">Lost</option>
+      </select>
+      <span class="filter-label">Trust</span>
+      <select class="filter-select" id="filter-trust">
+        <option value="">All</option>
+        <option value="trusted">Trusted (&gt;=80)</option>
+        <option value="suspicious">Suspicious (50-79)</option>
+        <option value="hostile">Hostile (&lt;50)</option>
+      </select>
+      <span class="filter-label">Source</span>
+      <select class="filter-select" id="filter-source">
+        <option value="">All Sources</option>
+        <option value="RemoteIdWiFi">RemoteID WiFi</option>
+        <option value="RemoteIdBLE">RemoteID BLE</option>
+        <option value="DJIDroneID">DJI DroneID</option>
+        <option value="WiFiFingerprint">WiFi Fingerprint</option>
+        <option value="TestInjection">Test Injection</option>
+      </select>
+      <span class="filter-label">Class</span>
+      <select class="filter-select" id="filter-class">
+        <option value="">All Classes</option>
+        <option value="consumer">Consumer</option>
+        <option value="prosumer">Prosumer</option>
+        <option value="enterprise">Enterprise</option>
+        <option value="fpv_racing">FPV / Racing</option>
+        <option value="delivery">Delivery</option>
+        <option value="agricultural">Agricultural</option>
+        <option value="military_le">Military / LE</option>
+        <option value="unknown">Unknown</option>
+      </select>
+      <span class="filter-label">Sort</span>
+      <select class="filter-select" id="fleet-sort">
+        <option value="newest" selected>Newest First</option>
+        <option value="status">Status Priority</option>
+        <option value="name">Name</option>
+        <option value="trust">Trust (low first)</option>
+        <option value="rssi">RSSI (strong first)</option>
+        <option value="altitude">Altitude (high first)</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- Summary Cards -->
+  <section class="section">
+    <div class="summary-row" style="grid-template-columns:repeat(6,1fr)">
+      <div class="summary-card accent-border" id="sum-total">
+        <div class="summary-val">0</div>
+        <div class="summary-label">Total UAVs</div>
+      </div>
+      <div class="summary-card safe-border" id="sum-airborne">
+        <div class="summary-val">0</div>
+        <div class="summary-label">Airborne</div>
+      </div>
+      <div class="summary-card info-border" id="sum-trust">
+        <div class="summary-val">--</div>
+        <div class="summary-label">Avg Trust Score</div>
+      </div>
+      <div class="summary-card warn-border" id="sum-spoof">
+        <div class="summary-val">0</div>
+        <div class="summary-label">Spoof Suspects</div>
+      </div>
+      <div class="summary-card accent-border" id="sum-identified">
+        <div class="summary-val">0</div>
+        <div class="summary-label">Identified</div>
+      </div>
+      <div class="summary-card warn-border" id="sum-alerts">
+        <div class="summary-val">0</div>
+        <div class="summary-label">Total Alerts</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UAV Fleet Grid -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>Detected UAVs</h2>
+      <span class="badge" id="fleet-count-badge">0</span>
+    </div>
+    <div id="fleet-grid"></div>
+    <div class="fleet-empty" id="fleet-empty">
+      <div class="fleet-empty-icon">&#9650;</div>
+      <div class="fleet-empty-text">No UAVs detected -- airspace clear</div>
+      <div class="fleet-empty-sub">Monitoring for Remote ID broadcasts</div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/js/mgrs.js"></script>
+<script src="/js/fleet.js"></script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

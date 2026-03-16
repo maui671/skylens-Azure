@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/png" href="/img/icon-192.png">
+<title>Skylens — Themes</title>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok)SkylensAuth.renderUserMenu('user-menu-container');});</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+    min-height: 100vh;
+}
+.showcase-header {
+    padding: 40px;
+    text-align: center;
+    border-bottom: 1px solid #222;
+}
+.showcase-header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, #22c55e, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.showcase-header p {
+    color: #888;
+    font-size: 16px;
+}
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    padding: 40px;
+    max-width: 1800px;
+    margin: 0 auto;
+}
+.theme-card {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.theme-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+.theme-preview {
+    height: 400px;
+    position: relative;
+    overflow: hidden;
+}
+.theme-info {
+    padding: 20px;
+    border-top: 1px solid #333;
+}
+.theme-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.theme-desc {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 12px;
+}
+.theme-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.theme-tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: #222;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.choose-btn {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 24px;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    color: #000;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.choose-btn:hover {
+    transform: scale(1.05);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 1: TACTICAL COMMAND (Grid Layout)
+   ══════════════════════════════════════════════════════════════ */
+.theme1 {
+    background: #050708;
+    display: grid;
+    grid-template-columns: 48px 1fr 260px;
+    grid-template-rows: 44px 1fr 24px;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+}
+.theme1 .t-sidebar {
+    grid-row: 1 / -1;
+    background: #0c0f12;
+    border-right: 1px solid #1e252d;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    gap: 8px;
+}
+.theme1 .t-sidebar-icon {
+    width: 32px;
+    height: 32px;
+    background: #22c55e;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: #000;
+    font-size: 14px;
+}
+.theme1 .t-nav-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5a6878;
+    font-size: 16px;
+    border-radius: 6px;
+}
+.theme1 .t-nav-icon.active {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+}
+.theme1 .t-header {
+    background: #0c0f12;
+    border-bottom: 1px solid #1e252d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+}
+.theme1 .t-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: #e8ecf0;
+    letter-spacing: 1px;
+}
+.theme1 .t-threat {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+}
+.theme1 .t-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: #5a6878;
+}
+.theme1 .t-stats strong {
+    color: #e8ecf0;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme1 .t-clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #e8ecf0;
+}
+.theme1 .t-map {
+    background: linear-gradient(135deg, #0a1015 0%, #050708 100%);
+    position: relative;
+}
+.theme1 .t-map::after {
+    content: 'MAP';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #1e252d;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 8px;
+}
+.theme1 .t-panel {
+    background: #0c0f12;
+    border-left: 1px solid #1e252d;
+    padding: 12px;
+}
+.theme1 .t-panel-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: #5a6878;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+.theme1 .t-contact {
+    background: #12161a;
+    border: 1px solid #1e252d;
+    border-left: 3px solid #22c55e;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+.theme1 .t-contact-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e8ecf0;
+}
+.theme1 .t-contact-meta {
+    font-size: 10px;
+    color: #5a6878;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme1 .t-status {
+    grid-column: 2 / -1;
+    background: #0c0f12;
+    border-top: 1px solid #1e252d;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 10px;
+    color: #5a6878;
+    gap: 16px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 2: GLASS OVERLAY (Floating Panels on Full Map)
+   ══════════════════════════════════════════════════════════════ */
+.theme2 {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+    position: relative;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+}
+.theme2::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 30h60M30 0v60' stroke='%23ffffff08' stroke-width='1'/%3E%3C/svg%3E");
+}
+.theme2 .t-glass {
+    position: absolute;
+    background: rgba(15, 15, 26, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.theme2 .t-top-bar {
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+.theme2 .t-logo {
+    font-weight: 800;
+    font-size: 14px;
+    color: #a855f7;
+    letter-spacing: 2px;
+}
+.theme2 .t-stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #888;
+}
+.theme2 .t-stat-pill strong {
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme2 .t-left-panel {
+    top: 60px;
+    left: 12px;
+    bottom: 12px;
+    width: 240px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+}
+.theme2 .t-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+.theme2 .t-uav-card {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+}
+.theme2 .t-uav-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+}
+.theme2 .t-uav-stats {
+    font-size: 10px;
+    color: #888;
+    margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme2 .t-right-panel {
+    top: 60px;
+    right: 12px;
+    width: 200px;
+    padding: 16px;
+}
+.theme2 .t-sensor {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.theme2 .t-sensor-dot {
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #22c55e;
+}
+.theme2 .t-sensor-name {
+    font-size: 11px;
+    color: #fff;
+}
+.theme2 .t-bottom-bar {
+    bottom: 12px;
+    left: 270px;
+    right: 230px;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-size: 10px;
+    color: #666;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 3: TERMINAL (Dense Monospace)
+   ══════════════════════════════════════════════════════════════ */
+.theme3 {
+    background: #000;
+    height: 100%;
+    font-family: 'Share Tech Mono', monospace;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #00ff00;
+}
+.theme3 .t-row {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+}
+.theme3 .t-box {
+    background: #0a0a0a;
+    border: 1px solid #00ff0033;
+    padding: 6px 10px;
+    font-size: 10px;
+}
+.theme3 .t-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.theme3 .t-title {
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+.theme3 .t-blink {
+    animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+.theme3 .t-contacts-box {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+.theme3 .t-contact-row {
+    padding: 4px 0;
+    border-bottom: 1px solid #00ff0022;
+    font-size: 9px;
+}
+.theme3 .t-contact-row.alert {
+    color: #ff0000;
+    background: #ff000011;
+}
+.theme3 .t-map-box {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.theme3 .t-map-box::before {
+    content: '[ TACTICAL MAP ]';
+    color: #00ff0044;
+    font-size: 14px;
+}
+.theme3 .t-sensors-box {
+    width: 180px;
+}
+.theme3 .t-sensor-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 9px;
+}
+.theme3 .t-sensor-row .on { color: #00ff00; }
+.theme3 .t-sensor-row .off { color: #ff0000; }
+.theme3 .t-log-box {
+    height: 60px;
+    flex: 1;
+    overflow: hidden;
+    font-size: 9px;
+    color: #00ff0088;
+}
+.theme3 .t-log-line {
+    padding: 1px 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 4: ARCTIC LIGHT (Clean White)
+   ══════════════════════════════════════════════════════════════ */
+.theme4 {
+    background: #f8fafc;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+.theme4 .t-header {
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.theme4 .t-logo {
+    font-weight: 800;
+    font-size: 16px;
+    color: #0ea5e9;
+}
+.theme4 .t-nav {
+    display: flex;
+    gap: 8px;
+}
+.theme4 .t-nav-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    border-radius: 6px;
+}
+.theme4 .t-nav-btn.active {
+    background: #0ea5e9;
+    color: #fff;
+}
+.theme4 .t-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+    padding: 16px;
+}
+.theme4 .t-sidebar {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.theme4 .t-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+.theme4 .t-contact-card {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 3px solid #22c55e;
+}
+.theme4 .t-contact-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+.theme4 .t-contact-meta {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 4px;
+}
+.theme4 .t-map-area {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #cbd5e1;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 5: CYBERPUNK NEON
+   ══════════════════════════════════════════════════════════════ */
+.theme5 {
+    background: #0a0a0a;
+    height: 100%;
+    font-family: 'Orbitron', sans-serif;
+    display: grid;
+    grid-template-rows: 50px 1fr 40px;
+    overflow: hidden;
+}
+.theme5 .t-header {
+    background: linear-gradient(90deg, #ff00ff22, #00ffff22);
+    border-bottom: 2px solid #ff00ff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+.theme5 .t-logo {
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #ff00ff, #00ffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 20px #ff00ff;
+}
+.theme5 .t-stats {
+    display: flex;
+    gap: 24px;
+}
+.theme5 .t-stat {
+    font-size: 10px;
+    color: #00ffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.theme5 .t-stat strong {
+    font-size: 14px;
+    color: #fff;
+    margin-left: 6px;
+    text-shadow: 0 0 10px #00ffff;
+}
+.theme5 .t-main {
+    display: grid;
+    grid-template-columns: 220px 1fr 220px;
+}
+.theme5 .t-left, .theme5 .t-right {
+    padding: 16px;
+    border-right: 1px solid #ff00ff33;
+}
+.theme5 .t-right {
+    border-right: none;
+    border-left: 1px solid #00ffff33;
+}
+.theme5 .t-section-title {
+    font-size: 9px;
+    color: #ff00ff;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-shadow: 0 0 5px #ff00ff;
+}
+.theme5 .t-card {
+    background: linear-gradient(135deg, #ff00ff11, #00ffff11);
+    border: 1px solid #ff00ff44;
+    padding: 10px;
+    margin-bottom: 8px;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+.theme5 .t-card-title {
+    font-size: 11px;
+    color: #fff;
+}
+.theme5 .t-card-meta {
+    font-size: 9px;
+    color: #888;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme5 .t-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.theme5 .t-center::before {
+    content: '';
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    border: 2px solid #ff00ff44;
+    border-radius: 50%;
+    animation: pulse5 2s infinite;
+}
+@keyframes pulse5 {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.5; }
+}
+.theme5 .t-footer {
+    background: linear-gradient(90deg, #00ffff22, #ff00ff22);
+    border-top: 2px solid #00ffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    font-size: 10px;
+    color: #666;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 6: MILITARY CARDS (Card Grid Dashboard)
+   ══════════════════════════════════════════════════════════════ */
+.theme6 {
+    background: #1a1c16;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto 1fr 1fr;
+    gap: 12px;
+}
+.theme6 .t-header-card {
+    grid-column: 1 / -1;
+    background: #252b1f;
+    border: 1px solid #3d4a32;
+    border-radius: 8px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.theme6 .t-logo {
+    font-weight: 800;
+    font-size: 14px;
+    color: #84cc16;
+    letter-spacing: 2px;
+}
+.theme6 .t-status-pills {
+    display: flex;
+    gap: 12px;
+}
+.theme6 .t-pill {
+    background: #84cc1622;
+    border: 1px solid #84cc1644;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    color: #84cc16;
+}
+.theme6 .t-card {
+    background: #252b1f;
+    border: 1px solid #3d4a32;
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+}
+.theme6 .t-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #3d4a32;
+}
+.theme6 .t-card-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: #a3a38c;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.theme6 .t-card-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #84cc16;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme6 .t-card-content {
+    flex: 1;
+    font-size: 11px;
+    color: #a3a38c;
+}
+.theme6 .t-map-card {
+    grid-column: 2 / 4;
+    grid-row: 2 / 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3d4a32;
+    font-size: 16px;
+    font-weight: 600;
+}
+.theme6 .t-contact-item {
+    padding: 6px 0;
+    border-bottom: 1px solid #3d4a3244;
+    color: #e8e8dc;
+    font-size: 11px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 7: SUNSET WARM (Horizontal Split)
+   ══════════════════════════════════════════════════════════════ */
+.theme7 {
+    background: #1c1410;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+.theme7 .t-header {
+    background: linear-gradient(90deg, #f59e0b22, #fbbf2422);
+    border-bottom: 1px solid #f59e0b44;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.theme7 .t-logo {
+    font-weight: 800;
+    font-size: 14px;
+    color: #f59e0b;
+}
+.theme7 .t-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #fbbf24;
+}
+.theme7 .t-map-section {
+    flex: 1;
+    background: linear-gradient(180deg, #292018 0%, #1c1410 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f59e0b22;
+    font-size: 20px;
+    font-weight: 700;
+    border-bottom: 1px solid #f59e0b33;
+}
+.theme7 .t-data-section {
+    height: 160px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: #f59e0b22;
+}
+.theme7 .t-data-col {
+    background: #1c1410;
+    padding: 12px;
+}
+.theme7 .t-col-title {
+    font-size: 9px;
+    font-weight: 600;
+    color: #f59e0b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+.theme7 .t-data-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 10px;
+    color: #a3846c;
+    border-bottom: 1px solid #f59e0b11;
+}
+.theme7 .t-data-row strong {
+    color: #fbbf24;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 8: DEEP VIOLET (Wide Cinematic)
+   ══════════════════════════════════════════════════════════════ */
+.theme8 {
+    background: #0f0a15;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    display: grid;
+    grid-template-rows: 36px 1fr 36px;
+}
+.theme8 .t-header {
+    background: #1a1225;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 24px;
+    border-bottom: 1px solid #2d1f3d;
+}
+.theme8 .t-logo {
+    font-weight: 800;
+    font-size: 12px;
+    color: #a855f7;
+    letter-spacing: 2px;
+}
+.theme8 .t-tabs {
+    display: flex;
+    gap: 4px;
+}
+.theme8 .t-tab {
+    padding: 8px 16px;
+    font-size: 10px;
+    color: #666;
+    border-bottom: 2px solid transparent;
+}
+.theme8 .t-tab.active {
+    color: #a855f7;
+    border-bottom-color: #a855f7;
+}
+.theme8 .t-stats {
+    margin-left: auto;
+    display: flex;
+    gap: 20px;
+    font-size: 10px;
+    color: #666;
+}
+.theme8 .t-stats strong {
+    color: #ec4899;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme8 .t-main {
+    display: grid;
+    grid-template-columns: 200px 1fr 200px;
+}
+.theme8 .t-panel {
+    background: #1a1225;
+    padding: 12px;
+    border-right: 1px solid #2d1f3d;
+}
+.theme8 .t-panel:last-child {
+    border-right: none;
+    border-left: 1px solid #2d1f3d;
+}
+.theme8 .t-panel-title {
+    font-size: 9px;
+    color: #a855f7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+.theme8 .t-item {
+    padding: 8px;
+    background: #2d1f3d44;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    color: #ddd;
+}
+.theme8 .t-map {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2d1f3d;
+    font-size: 16px;
+}
+.theme8 .t-footer {
+    background: #1a1225;
+    border-top: 1px solid #2d1f3d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    font-size: 10px;
+    color: #555;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 9: OCEAN TEAL (Minimal Focus)
+   ══════════════════════════════════════════════════════════════ */
+.theme9 {
+    background: linear-gradient(135deg, #0a1214 0%, #0f1a1c 100%);
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    position: relative;
+    overflow: hidden;
+}
+.theme9 .t-map-bg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #14b8a611;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: 16px;
+}
+.theme9 .t-floating {
+    position: absolute;
+    background: rgba(15, 26, 28, 0.95);
+    border: 1px solid #14b8a633;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.theme9 .t-top-left {
+    top: 16px;
+    left: 16px;
+}
+.theme9 .t-logo {
+    font-weight: 800;
+    font-size: 18px;
+    color: #14b8a6;
+    margin-bottom: 8px;
+}
+.theme9 .t-threat-badge {
+    display: inline-block;
+    background: #14b8a622;
+    color: #14b8a6;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+}
+.theme9 .t-bottom-left {
+    bottom: 16px;
+    left: 16px;
+    width: 280px;
+    max-height: 200px;
+    overflow: hidden;
+}
+.theme9 .t-section-title {
+    font-size: 10px;
+    color: #14b8a6;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+.theme9 .t-contact {
+    background: #14b8a611;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 6px;
+}
+.theme9 .t-contact-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+}
+.theme9 .t-contact-meta {
+    font-size: 10px;
+    color: #06b6d4;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+}
+.theme9 .t-top-right {
+    top: 16px;
+    right: 16px;
+    text-align: right;
+}
+.theme9 .t-clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 24px;
+    color: #fff;
+}
+.theme9 .t-date {
+    font-size: 11px;
+    color: #06b6d4;
+    margin-top: 4px;
+}
+.theme9 .t-bottom-right {
+    bottom: 16px;
+    right: 16px;
+    font-size: 10px;
+    color: #666;
+}
+.theme9 .t-stat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 4px 0;
+}
+.theme9 .t-stat-row strong {
+    color: #14b8a6;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   THEME 10: MONOCHROME STEEL (Pure Grayscale)
+   ══════════════════════════════════════════════════════════════ */
+.theme10 {
+    background: #09090b;
+    height: 100%;
+    font-family: 'Inter', sans-serif;
+    display: grid;
+    grid-template-columns: 60px 240px 1fr;
+    grid-template-rows: 1fr;
+}
+.theme10 .t-icon-bar {
+    background: #0f0f11;
+    border-right: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 8px;
+}
+.theme10 .t-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 16px;
+    border-radius: 8px;
+}
+.theme10 .t-icon.active {
+    background: #222;
+    color: #fff;
+}
+.theme10 .t-list-panel {
+    background: #0f0f11;
+    border-right: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+}
+.theme10 .t-panel-header {
+    padding: 16px;
+    border-bottom: 1px solid #222;
+}
+.theme10 .t-panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.theme10 .t-panel-count {
+    font-size: 10px;
+    color: #555;
+    margin-top: 4px;
+}
+.theme10 .t-contacts {
+    flex: 1;
+    padding: 8px;
+    overflow: auto;
+}
+.theme10 .t-contact {
+    padding: 12px;
+    border-bottom: 1px solid #1a1a1c;
+    cursor: pointer;
+}
+.theme10 .t-contact:hover {
+    background: #18181b;
+}
+.theme10 .t-contact.selected {
+    background: #222;
+    border-left: 2px solid #fff;
+}
+.theme10 .t-contact-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #ddd;
+}
+.theme10 .t-contact-meta {
+    font-size: 10px;
+    color: #555;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.theme10 .t-main {
+    display: flex;
+    flex-direction: column;
+}
+.theme10 .t-toolbar {
+    background: #0f0f11;
+    border-bottom: 1px solid #222;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.theme10 .t-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #888;
+}
+.theme10 .t-actions {
+    display: flex;
+    gap: 8px;
+}
+.theme10 .t-btn {
+    padding: 6px 12px;
+    background: #18181b;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #888;
+}
+.theme10 .t-map-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #222;
+    font-size: 18px;
+    font-weight: 600;
+}
+</style>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<div class="showcase-header" style="position:relative">
+    <div id="user-menu-container" style="position:absolute;top:16px;right:16px"></div>
+    <h1>SKYLENS Theme Showcase</h1>
+    <p>Click on any theme to preview it live. Each has a unique layout AND color scheme.</p>
+</div>
+
+<div class="theme-grid">
+
+    <!-- THEME 1 -->
+    <div class="theme-card">
+        <div class="theme-preview theme1">
+            <div class="t-sidebar">
+                <div class="t-sidebar-icon">S</div>
+                <div class="t-nav-icon active">&#9678;</div>
+                <div class="t-nav-icon">&#9650;</div>
+                <div class="t-nav-icon">&#9673;</div>
+            </div>
+            <div class="t-header">
+                <span class="t-title">SKYLENS</span>
+                <span class="t-threat">LOW</span>
+                <div class="t-stats">
+                    <span>UAVs <strong>3</strong></span>
+                    <span>Sensors <strong>2/2</strong></span>
+                </div>
+                <span class="t-clock">14:32:07</span>
+            </div>
+            <div class="t-map"></div>
+            <div class="t-panel">
+                <div class="t-panel-title">Contacts</div>
+                <div class="t-contact">
+                    <div class="t-contact-name">DJI Mavic 3</div>
+                    <div class="t-contact-meta">45m | 8.2 m/s | -62dBm</div>
+                </div>
+                <div class="t-contact">
+                    <div class="t-contact-name">Unknown UAV</div>
+                    <div class="t-contact-meta">120m | 12.5 m/s | -71dBm</div>
+                </div>
+            </div>
+            <div class="t-status">
+                <span>Node: skylens-node</span>
+                <span>Uptime: 4h 23m</span>
+                <span>v2.0.0</span>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">1. Tactical Command</div>
+            <div class="theme-desc">Grid layout with sidebar, header, map, and right panel. Clean military aesthetic.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Dark</span>
+                <span class="theme-tag">Green Accent</span>
+                <span class="theme-tag">Grid Layout</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(1)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 2 -->
+    <div class="theme-card">
+        <div class="theme-preview theme2">
+            <div class="t-glass t-top-bar">
+                <span class="t-logo">SKYLENS</span>
+                <div class="t-stat-pill">UAVs <strong>3</strong></div>
+                <div class="t-stat-pill">Sensors <strong>2</strong></div>
+                <div class="t-stat-pill">Threat <strong>LOW</strong></div>
+            </div>
+            <div class="t-glass t-left-panel">
+                <div class="t-section-title">Active Contacts</div>
+                <div class="t-uav-card">
+                    <div class="t-uav-name">DJI Mavic 3</div>
+                    <div class="t-uav-stats">Alt: 45m | Spd: 8.2m/s</div>
+                </div>
+                <div class="t-uav-card">
+                    <div class="t-uav-name">Unknown UAV</div>
+                    <div class="t-uav-stats">Alt: 120m | Spd: 12.5m/s</div>
+                </div>
+            </div>
+            <div class="t-glass t-right-panel">
+                <div class="t-section-title">Sensors</div>
+                <div class="t-sensor">
+                    <div class="t-sensor-dot"></div>
+                    <span class="t-sensor-name">Tap 1 - CH149</span>
+                </div>
+                <div class="t-sensor">
+                    <div class="t-sensor-dot"></div>
+                    <span class="t-sensor-name">Tap 2 - CH36</span>
+                </div>
+            </div>
+            <div class="t-glass t-bottom-bar">
+                <span>14:32:07 UTC</span>
+                <span>Frames: 142.3K</span>
+                <span>Rate: 847/s</span>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">2. Glass Overlay</div>
+            <div class="theme-desc">Full-screen map with floating glass panels. Modern and immersive.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Dark Purple</span>
+                <span class="theme-tag">Glassmorphism</span>
+                <span class="theme-tag">Floating Panels</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(2)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 3 -->
+    <div class="theme-card">
+        <div class="theme-preview theme3">
+            <div class="t-box t-header-row">
+                <span class="t-title">SKYLENS TERMINAL</span>
+                <span>STATUS: ACTIVE <span class="t-blink">_</span></span>
+            </div>
+            <div class="t-row">
+                <div class="t-box t-contacts-box">
+                    <div>--- CONTACTS ---</div>
+                    <div class="t-contact-row">[1] DJI-MAVIC-3 45m 8.2m/s</div>
+                    <div class="t-contact-row alert">[2] UNKNOWN 120m 12.5m/s !</div>
+                    <div class="t-contact-row">[3] PARROT-ANAFI 30m 0.0m/s</div>
+                </div>
+                <div class="t-box t-map-box"></div>
+                <div class="t-box t-sensors-box">
+                    <div>--- SENSORS ---</div>
+                    <div class="t-sensor-row"><span>TAP-001</span><span class="on">ONLINE</span></div>
+                    <div class="t-sensor-row"><span>TAP-002</span><span class="on">ONLINE</span></div>
+                    <div class="t-sensor-row"><span>TAP-003</span><span class="off">OFFLINE</span></div>
+                </div>
+            </div>
+            <div class="t-row" style="flex:0 0 60px">
+                <div class="t-box t-log-box" style="flex:1">
+                    <div class="t-log-line">[14:32:01] Contact acquired: DJI-MAVIC-3</div>
+                    <div class="t-log-line">[14:32:03] Signal strength: -62dBm</div>
+                    <div class="t-log-line">[14:32:05] New contact: UNKNOWN</div>
+                    <div class="t-log-line">[14:32:07] WARNING: No RID detected</div>
+                </div>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">3. Terminal</div>
+            <div class="theme-desc">Dense monospace terminal style. Maximum information density.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Black</span>
+                <span class="theme-tag">Green Text</span>
+                <span class="theme-tag">Retro</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(3)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 4 -->
+    <div class="theme-card">
+        <div class="theme-preview theme4">
+            <div class="t-header">
+                <span class="t-logo">skylens</span>
+                <div class="t-nav">
+                    <span class="t-nav-btn active">Airspace</span>
+                    <span class="t-nav-btn">Fleet</span>
+                    <span class="t-nav-btn">Sensors</span>
+                    <span class="t-nav-btn">Alerts</span>
+                </div>
+            </div>
+            <div class="t-main">
+                <div class="t-sidebar">
+                    <div class="t-section-title">Active Contacts</div>
+                    <div class="t-contact-card">
+                        <div class="t-contact-name">DJI Mavic 3</div>
+                        <div class="t-contact-meta">45m altitude | 8.2 m/s</div>
+                    </div>
+                    <div class="t-contact-card" style="border-left-color: #f59e0b">
+                        <div class="t-contact-name">Unknown UAV</div>
+                        <div class="t-contact-meta">120m altitude | 12.5 m/s</div>
+                    </div>
+                </div>
+                <div class="t-map-area">MAP VIEW</div>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">4. Arctic Light</div>
+            <div class="theme-desc">Clean white theme for daylight use. Minimal shadows, blue accents.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Light</span>
+                <span class="theme-tag">Blue Accent</span>
+                <span class="theme-tag">Clean</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(4)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 5 -->
+    <div class="theme-card">
+        <div class="theme-preview theme5">
+            <div class="t-header">
+                <span class="t-logo">SKYLENS</span>
+                <div class="t-stats">
+                    <div class="t-stat">UAVS<strong>3</strong></div>
+                    <div class="t-stat">SENSORS<strong>2</strong></div>
+                    <div class="t-stat">THREAT<strong>LOW</strong></div>
+                </div>
+            </div>
+            <div class="t-main">
+                <div class="t-left">
+                    <div class="t-section-title">CONTACTS</div>
+                    <div class="t-card">
+                        <div class="t-card-title">DJI MAVIC 3</div>
+                        <div class="t-card-meta">45m | 8.2m/s | -62dBm</div>
+                    </div>
+                    <div class="t-card">
+                        <div class="t-card-title">UNKNOWN</div>
+                        <div class="t-card-meta">120m | 12.5m/s | -71dBm</div>
+                    </div>
+                </div>
+                <div class="t-center"></div>
+                <div class="t-right">
+                    <div class="t-section-title">SYSTEMS</div>
+                    <div class="t-card">
+                        <div class="t-card-title">TAP-001</div>
+                        <div class="t-card-meta">CH149 | 23.4K frames</div>
+                    </div>
+                </div>
+            </div>
+            <div class="t-footer">
+                <span>CONNECTED</span>
+                <span>14:32:07</span>
+                <span>v2.0.0</span>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">5. Cyberpunk Neon</div>
+            <div class="theme-desc">Futuristic with hot magenta and cyan. Angular cut corners.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Black</span>
+                <span class="theme-tag">Neon Pink/Cyan</span>
+                <span class="theme-tag">Futuristic</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(5)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 6 -->
+    <div class="theme-card">
+        <div class="theme-preview theme6">
+            <div class="t-header-card">
+                <span class="t-logo">SKYLENS</span>
+                <div class="t-status-pills">
+                    <span class="t-pill">3 UAVs</span>
+                    <span class="t-pill">2 Sensors</span>
+                    <span class="t-pill">LOW</span>
+                </div>
+            </div>
+            <div class="t-card">
+                <div class="t-card-header">
+                    <span class="t-card-title">Active Contacts</span>
+                    <span class="t-card-value">3</span>
+                </div>
+                <div class="t-card-content">
+                    <div class="t-contact-item">DJI Mavic 3 - 45m</div>
+                    <div class="t-contact-item">Unknown UAV - 120m</div>
+                </div>
+            </div>
+            <div class="t-card t-map-card">[ TACTICAL MAP ]</div>
+            <div class="t-card">
+                <div class="t-card-header">
+                    <span class="t-card-title">Sensors</span>
+                    <span class="t-card-value">2</span>
+                </div>
+                <div class="t-card-content">
+                    <div class="t-contact-item">Tap 1 - Online</div>
+                    <div class="t-contact-item">Tap 2 - Online</div>
+                </div>
+            </div>
+            <div class="t-card">
+                <div class="t-card-header">
+                    <span class="t-card-title">Alerts</span>
+                    <span class="t-card-value">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">6. Military Cards</div>
+            <div class="theme-desc">Card-based grid dashboard. Army olive/khaki tones.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Olive</span>
+                <span class="theme-tag">Card Grid</span>
+                <span class="theme-tag">Military</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(6)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 7 -->
+    <div class="theme-card">
+        <div class="theme-preview theme7">
+            <div class="t-header">
+                <span class="t-logo">SKYLENS</span>
+                <span class="t-time">14:32:07</span>
+            </div>
+            <div class="t-map-section">[ MAP VIEW ]</div>
+            <div class="t-data-section">
+                <div class="t-data-col">
+                    <div class="t-col-title">Contacts</div>
+                    <div class="t-data-row"><span>DJI Mavic 3</span><strong>45m</strong></div>
+                    <div class="t-data-row"><span>Unknown</span><strong>120m</strong></div>
+                </div>
+                <div class="t-data-col">
+                    <div class="t-col-title">Sensors</div>
+                    <div class="t-data-row"><span>Tap 1</span><strong>ON</strong></div>
+                    <div class="t-data-row"><span>Tap 2</span><strong>ON</strong></div>
+                </div>
+                <div class="t-data-col">
+                    <div class="t-col-title">Stats</div>
+                    <div class="t-data-row"><span>Frames</span><strong>142K</strong></div>
+                    <div class="t-data-row"><span>Rate</span><strong>847/s</strong></div>
+                </div>
+                <div class="t-data-col">
+                    <div class="t-col-title">System</div>
+                    <div class="t-data-row"><span>Uptime</span><strong>4h 23m</strong></div>
+                    <div class="t-data-row"><span>Version</span><strong>2.0.0</strong></div>
+                </div>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">7. Sunset Warm</div>
+            <div class="theme-desc">Horizontal split - map on top, data tables below. Warm amber tones.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Brown/Orange</span>
+                <span class="theme-tag">Split Layout</span>
+                <span class="theme-tag">Warm</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(7)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 8 -->
+    <div class="theme-card">
+        <div class="theme-preview theme8">
+            <div class="t-header">
+                <span class="t-logo">SKYLENS</span>
+                <div class="t-tabs">
+                    <span class="t-tab active">Airspace</span>
+                    <span class="t-tab">Fleet</span>
+                    <span class="t-tab">Sensors</span>
+                    <span class="t-tab">System</span>
+                </div>
+                <div class="t-stats">
+                    <span>UAVs <strong>3</strong></span>
+                    <span>Sensors <strong>2</strong></span>
+                </div>
+            </div>
+            <div class="t-main">
+                <div class="t-panel">
+                    <div class="t-panel-title">Contacts</div>
+                    <div class="t-item">DJI Mavic 3</div>
+                    <div class="t-item">Unknown UAV</div>
+                    <div class="t-item">Parrot Anafi</div>
+                </div>
+                <div class="t-map">[ MAP ]</div>
+                <div class="t-panel">
+                    <div class="t-panel-title">Details</div>
+                    <div class="t-item">Alt: 45m</div>
+                    <div class="t-item">Speed: 8.2 m/s</div>
+                    <div class="t-item">RSSI: -62 dBm</div>
+                </div>
+            </div>
+            <div class="t-footer">
+                <span>skylens-node</span>
+                <span>4h 23m uptime</span>
+                <span>v2.0.0</span>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">8. Deep Violet</div>
+            <div class="theme-desc">Wide cinematic layout with thin bars. Purple/pink accents.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Purple</span>
+                <span class="theme-tag">Cinematic</span>
+                <span class="theme-tag">Tab Nav</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(8)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 9 -->
+    <div class="theme-card">
+        <div class="theme-preview theme9">
+            <div class="t-map-bg">MAP</div>
+            <div class="t-floating t-top-left">
+                <div class="t-logo">SKYLENS</div>
+                <span class="t-threat-badge">THREAT: LOW</span>
+            </div>
+            <div class="t-floating t-bottom-left">
+                <div class="t-section-title">Active Contacts</div>
+                <div class="t-contact">
+                    <div class="t-contact-name">DJI Mavic 3</div>
+                    <div class="t-contact-meta">45m | 8.2 m/s</div>
+                </div>
+                <div class="t-contact">
+                    <div class="t-contact-name">Unknown UAV</div>
+                    <div class="t-contact-meta">120m | 12.5 m/s</div>
+                </div>
+            </div>
+            <div class="t-floating t-top-right">
+                <div class="t-clock">14:32</div>
+                <div class="t-date">SAT FEB 07</div>
+            </div>
+            <div class="t-floating t-bottom-right">
+                <div class="t-stat-row"><span>Sensors</span><strong>2/2</strong></div>
+                <div class="t-stat-row"><span>Frames</span><strong>142.3K</strong></div>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">9. Ocean Teal</div>
+            <div class="theme-desc">Minimal focus - just map with floating info boxes. Teal/cyan colors.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Teal</span>
+                <span class="theme-tag">Minimal</span>
+                <span class="theme-tag">Focus Mode</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(9)">Use This Theme</button>
+        </div>
+    </div>
+
+    <!-- THEME 10 -->
+    <div class="theme-card">
+        <div class="theme-preview theme10">
+            <div class="t-icon-bar">
+                <div class="t-icon active">&#9678;</div>
+                <div class="t-icon">&#9650;</div>
+                <div class="t-icon">&#9673;</div>
+                <div class="t-icon">&#9888;</div>
+            </div>
+            <div class="t-list-panel">
+                <div class="t-panel-header">
+                    <div class="t-panel-title">Contacts</div>
+                    <div class="t-panel-count">3 active</div>
+                </div>
+                <div class="t-contacts">
+                    <div class="t-contact selected">
+                        <div class="t-contact-name">DJI Mavic 3</div>
+                        <div class="t-contact-meta">45m | 8.2 m/s</div>
+                    </div>
+                    <div class="t-contact">
+                        <div class="t-contact-name">Unknown UAV</div>
+                        <div class="t-contact-meta">120m | 12.5 m/s</div>
+                    </div>
+                    <div class="t-contact">
+                        <div class="t-contact-name">Parrot Anafi</div>
+                        <div class="t-contact-meta">30m | 0.0 m/s</div>
+                    </div>
+                </div>
+            </div>
+            <div class="t-main">
+                <div class="t-toolbar">
+                    <span class="t-title">Airspace Monitor</span>
+                    <div class="t-actions">
+                        <span class="t-btn">Fit All</span>
+                        <span class="t-btn">Trails</span>
+                    </div>
+                </div>
+                <div class="t-map-area">MAP</div>
+            </div>
+        </div>
+        <div class="theme-info">
+            <div class="theme-name">10. Monochrome Steel</div>
+            <div class="theme-desc">Pure grayscale. No color distractions. Industrial minimal.</div>
+            <div class="theme-tags">
+                <span class="theme-tag">Grayscale</span>
+                <span class="theme-tag">Minimal</span>
+                <span class="theme-tag">Industrial</span>
+            </div>
+            <button class="choose-btn" onclick="selectTheme(10)">Use This Theme</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function selectTheme(num) {
+    // Store selection
+    localStorage.setItem('skylens_selected_theme', num);
+
+    // Redirect to apply theme (or show confirmation)
+    alert('Theme ' + num + ' selected! Building this theme...\n\nThis will redirect you to the new dashboard.');
+
+    // In production, this would apply the theme
+    // window.location.href = '/?theme=' + num;
+}
+</script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+[package]
+name = "skylens-tap"
+version = "0.3.0"
+edition = "2021"
+description = "Skylens drone detection tap - raw 802.11 capture and RemoteID decoding"
+
+[dependencies]
+# Packet capture
+pcap = "2.2"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# NATS messaging
+async-nats = "0.38"
+
+# Protobuf
+prost = "0.13"
+prost-types = "0.13"
+
+# Config
+toml = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# System info
+sysinfo = "0.32"
+
+# Utilities
+uuid = { version = "1", features = ["v4", "v5"] }
+hex = "0.4"
+bytes = "1"
+anyhow = "1"
+chrono = "0.4"
+regex = "1"
+futures = "0.3"
+
+# Systemd integration
+sd-notify = "0.4"
+
+# Netlink nl80211 for fast channel switching
+neli = "0.7"
+
+# Bluetooth LE scanning (BlueZ D-Bus bindings)
+bluer = { version = "0.17", features = ["bluetoothd"] }
+
+[build-dependencies]
+prost-build = "0.13"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

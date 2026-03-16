@@ -1,0 +1,15 @@
+[Unit]
+Description=Skylens Raw Frame Capture (daily pcap files)
+After=skylens-tap.service
+Requires=skylens-tap.service
+
+[Service]
+Type=simple
+# Capture management frames on wlan1, rotate every 24h (86400s), ring buffer keeps 30 files
+# Files written to /var/log/skylens/ as pcapng, ~50-80MB/day compressed
+ExecStart=/usr/bin/dumpcap -i wlan1 -f "type mgt" -b duration:86400 -b files:30 -w /var/log/skylens/raw.pcapng
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

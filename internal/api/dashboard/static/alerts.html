@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/png" href="/img/icon-192.png">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — Alerts</title>
+<link rel="stylesheet" href="/css/dashboard.css">
+<style>
+/* --- ALERTS PAGE ADDITIONS --- */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: 16px;
+}
+.filter-pills {
+    display: flex;
+    gap: 4px;
+}
+.filter-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--t2);
+    cursor: pointer;
+    transition: all .15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: var(--font);
+}
+.filter-pill:hover {
+    border-color: var(--border-hi);
+    color: var(--t0);
+    background: var(--bg3);
+}
+.filter-pill.active {
+    background: var(--accent);
+    color: var(--bg0);
+    border-color: var(--accent);
+    font-weight: 700;
+}
+.filter-pill.active.crit-pill {
+    background: var(--critical);
+    border-color: var(--critical);
+}
+.filter-pill.active.high-pill {
+    background: var(--warning);
+    border-color: var(--warning);
+}
+.filter-pill.active.med-pill {
+    background: var(--caution);
+    border-color: var(--caution);
+}
+.filter-pill.active.info-pill {
+    background: var(--info);
+    border-color: var(--info);
+}
+.filter-select {
+    font-size: 12px;
+    font-family: var(--font);
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--t1);
+    cursor: pointer;
+    outline: none;
+    min-width: 150px;
+}
+.filter-select:focus {
+    border-color: var(--accent);
+}
+.filter-select option {
+    background: var(--bg2);
+    color: var(--t1);
+}
+.filter-search {
+    font-size: 12px;
+    font-family: var(--font);
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--t1);
+    outline: none;
+    flex: 1;
+    min-width: 180px;
+}
+.filter-search::placeholder { color: var(--t3); }
+.filter-search:focus { border-color: var(--accent); }
+.btn {
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font);
+    padding: 6px 14px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all .15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.btn-ack {
+    background: var(--bg3);
+    color: var(--t1);
+    border-color: var(--border);
+}
+.btn-ack:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.btn-ack-all {
+    background: transparent;
+    color: var(--warning);
+    border-color: var(--warning);
+    margin-left: auto;
+}
+.btn-ack-all:hover {
+    background: var(--warning-dim);
+}
+.summary-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.summary-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px;
+    text-align: center;
+    transition: border-color .2s;
+}
+.summary-card:hover { border-color: var(--border-hi); }
+.summary-card.crit-border { border-left: 3px solid var(--critical); }
+.summary-card.warn-border { border-left: 3px solid var(--warning); }
+.summary-card.info-border { border-left: 3px solid var(--info); }
+.summary-card.accent-border { border-left: 3px solid var(--accent); }
+.summary-val {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--t0);
+    font-family: var(--mono);
+    letter-spacing: -1px;
+    line-height: 1;
+}
+.summary-val.crit-text { color: var(--critical); }
+.summary-val.warn-text { color: var(--warning); }
+.summary-label {
+    font-size: 11px;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+}
+.full-tbl-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+    overflow-y: auto;
+    max-height: calc(100vh - 360px);
+}
+#alerts-full-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+#alerts-full-tbl thead th {
+    background: var(--bg3);
+    color: var(--t2);
+    font-weight: 600;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    cursor: pointer;
+    user-select: none;
+    transition: color .15s;
+}
+#alerts-full-tbl thead th:hover {
+    color: var(--t0);
+}
+#alerts-full-tbl thead th .sort-arrow {
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.4;
+}
+#alerts-full-tbl thead th.sorted .sort-arrow {
+    opacity: 1;
+    color: var(--accent);
+}
+#alerts-full-tbl tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+}
+#alerts-full-tbl tbody tr:hover { background: var(--accent-dim); }
+#alerts-full-tbl tbody tr.acked-row { opacity: 0.55; }
+#alerts-full-tbl tbody tr.acked-row:hover { opacity: 0.8; }
+#alerts-full-tbl tbody td {
+    padding: 8px 12px;
+    color: var(--t1);
+    vertical-align: middle;
+}
+#alerts-full-tbl .alert-msg {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#alerts-full-tbl .alert-type {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t2);
+}
+#alerts-full-tbl .alert-time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t3);
+    white-space: nowrap;
+}
+.alert-uav {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t1);
+}
+.btn-ack-sm {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font);
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--t2);
+    cursor: pointer;
+    transition: all .15s;
+}
+.btn-ack-sm:hover {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+@media (max-width: 900px) {
+    .summary-row { grid-template-columns: repeat(2, 1fr); }
+    .filter-bar { gap: 8px; }
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+      <span class="sb-badge" id="sb-badge-fleet"></span>
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item active">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+      <span class="sb-badge" id="sb-badge-alerts"></span>
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div id="user-menu-container"></div>
+    <div class="sb-version">v0.1.0</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+
+  <!-- Header Bar -->
+  <header id="hdr">
+    <div class="hdr-left">
+      <h1>Alert Management</h1>
+      <span class="hdr-node" id="hdr-node"></span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-conn" id="hdr-conn">
+        <span class="hdr-dot green"></span> Connected
+      </span>
+      <span class="hdr-clock" id="hdr-clock"></span>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <section class="section">
+    <div class="filter-bar">
+      <div class="filter-pills" id="filter-pills">
+        <button class="filter-pill active" data-pri="ALL">All</button>
+        <button class="filter-pill crit-pill" data-pri="CRITICAL">Critical</button>
+        <button class="filter-pill high-pill" data-pri="HIGH">High</button>
+        <button class="filter-pill med-pill" data-pri="MEDIUM">Medium</button>
+        <button class="filter-pill info-pill" data-pri="INFO">Info</button>
+      </div>
+      <select class="filter-select" id="filter-type">
+        <option value="">All Types</option>
+      </select>
+      <input class="filter-search" id="filter-search" type="text"
+             placeholder="Search identifier or message...">
+      <button class="btn btn-ack-all" id="btn-ack-all">Acknowledge All</button>
+    </div>
+  </section>
+
+  <!-- Summary Cards -->
+  <section class="section">
+    <div class="summary-row">
+      <div class="summary-card accent-border" id="sum-total">
+        <div class="summary-val">0</div>
+        <div class="summary-label">Total Alerts</div>
+      </div>
+      <div class="summary-card warn-border" id="sum-unacked">
+        <div class="summary-val warn-text">0</div>
+        <div class="summary-label">Unacknowledged</div>
+      </div>
+      <div class="summary-card crit-border" id="sum-critical">
+        <div class="summary-val crit-text">0</div>
+        <div class="summary-label">Critical</div>
+      </div>
+      <div class="summary-card info-border" id="sum-24h">
+        <div class="summary-val">0</div>
+        <div class="summary-label">Last 24 Hours</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alerts Table -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>All Alerts</h2>
+      <span class="badge" id="alert-count-badge">0</span>
+    </div>
+    <div class="full-tbl-wrap">
+      <table id="alerts-full-tbl">
+        <thead>
+          <tr>
+            <th data-sort="priority" style="width:90px">Priority <span class="sort-arrow">&#9650;</span></th>
+            <th data-sort="type" style="width:150px">Type <span class="sort-arrow">&#9650;</span></th>
+            <th data-sort="uav" style="width:130px">UAV Identifier <span class="sort-arrow">&#9650;</span></th>
+            <th data-sort="message">Message <span class="sort-arrow">&#9650;</span></th>
+            <th data-sort="timestamp" class="sorted" style="width:100px">Time <span class="sort-arrow">&#9660;</span></th>
+            <th style="width:70px">Status</th>
+            <th style="width:80px">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="alerts-body"></tbody>
+      </table>
+      <div class="empty-state" id="alerts-empty" style="display:none">No alerts &mdash; airspace clear</div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/js/alerts.js"></script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+syntax = "proto3";
+package skylens;
+
+option go_package = "github.com/skylens/skylens-node/proto";
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SKYLENS PROTOCOL BUFFER DEFINITIONS
+// Shared between skylens-tap (Rust) and skylens-node (Go)
+// Version: 1.0.0
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DETECTION MESSAGE
+// Sent from Tap → Node for each drone detection
+// ─────────────────────────────────────────────────────────────────────────────
+
+message Detection {
+    // ── Source identification ──
+    string tap_id = 1;                    // UUID of the tap that detected this
+    int64 timestamp_ns = 2;               // Unix nanoseconds (for sub-ms precision)
+
+    // ── Drone identification ──
+    string mac_address = 3;               // WiFi MAC (format: "AA:BB:CC:DD:EE:FF")
+    string identifier = 4;                // Primary ID (serial or generated)
+    string serial_number = 5;             // RemoteID serial (if available)
+    string registration = 6;              // CAA/FAA registration ID
+    string session_id = 7;                // RemoteID session ID
+    string utm_id = 8;                    // UTM assigned ID
+
+    // ── Position ──
+    double latitude = 10;                 // WGS84 degrees
+    double longitude = 11;                // WGS84 degrees
+    float altitude_geodetic = 12;         // Meters above WGS84 ellipsoid
+    float altitude_pressure = 13;         // Meters above MSL (barometric)
+    float height_agl = 14;                // Meters above ground/takeoff
+    HeightReference height_reference = 15; // What height is relative to
+
+    // ── Movement ──
+    float speed = 20;                     // Ground speed m/s
+    float vertical_speed = 21;            // Climb/descent m/s (positive = up)
+    float heading = 22;                   // Track/ground course degrees (0-359)
+    float track_direction = 23;           // Direction of travel
+
+    // ── Operator position ──
+    double operator_latitude = 30;
+    double operator_longitude = 31;
+    float operator_altitude = 32;
+    OperatorLocationType operator_location_type = 33;
+    string operator_id = 34;              // Operator/pilot ID if broadcast
+
+    // ── Signal characteristics ──
+    int32 rssi = 40;                      // Signal strength dBm
+    int32 channel = 41;                   // WiFi channel
+    int32 frequency_mhz = 42;             // Exact frequency if known
+    string ssid = 43;                     // WiFi SSID (from beacon/probe)
+    uint32 beacon_interval_tu = 44;       // Beacon interval in Time Units (1 TU = 1.024ms)
+
+    // ── Detection metadata ──
+    DetectionSource source = 50;          // How we detected this
+    string uav_type = 51;                 // RemoteID UA type string
+    UAVCategory uav_category = 52;        // Categorization
+    string designation = 53;              // Decoded model name (e.g., "DJI Mavic 3")
+    string manufacturer = 54;             // Manufacturer name
+    OperationalStatus operational_status = 55;
+    float confidence = 56;                // Detection confidence (0.0 - 1.0)
+    bool is_controller = 58;              // True if remote controller, not drone
+    string country_code = 59;             // Country IE from beacon (e.g. "US", "CN") — firmware region
+
+    // ── Raw data (optional, for debugging/analysis) ──
+    bytes raw_frame = 60;                 // Full 802.11 frame
+    bytes remoteid_payload = 61;          // Just the RemoteID TLV data
+
+    // ── Extended 802.11 fingerprint ──
+    uint32 ht_capabilities = 70;          // HT Capability Info (802.11n) — device hardware fingerprint
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAP HEARTBEAT
+// Sent every 5 seconds to indicate tap is alive
+// ─────────────────────────────────────────────────────────────────────────────
+
+message TapHeartbeat {
+    string tap_id = 1;
+    string tap_name = 2;
+    int64 timestamp_ns = 3;
+
+    // ── Tap location ──
+    double latitude = 10;
+    double longitude = 11;
+    float altitude = 12;
+
+    // ── Statistics ──
+    TapStats stats = 20;
+
+    // ── System health ──
+    float cpu_percent = 30;
+    float memory_percent = 31;
+    float temperature_celsius = 32;
+    string wifi_interface = 33;
+    string version = 34;
+}
+
+message TapStats {
+    uint64 packets_captured = 1;          // Total packets seen
+    uint64 packets_filtered = 2;          // Packets passing BPF filter
+    uint64 detections_sent = 3;           // Detection messages published
+    uint64 bytes_captured = 4;            // Total bytes captured
+    int32 current_channel = 5;            // Current WiFi channel
+    float packets_per_second = 6;         // Current rate
+    uint64 uptime_seconds = 7;            // Seconds since tap started
+    uint32 pcap_kernel_received = 8;      // Packets received by kernel
+    uint32 pcap_kernel_dropped = 9;       // Packets dropped by kernel
+
+    // ── Buffer metrics (reliable delivery) ──
+    uint64 buffer_size = 10;              // Current buffered detections awaiting publish
+    uint64 buffer_dropped = 11;           // Detections dropped due to buffer overflow
+    uint64 publish_retries = 12;          // Total publish retry attempts
+    uint64 nats_disconnects = 13;         // NATS disconnection events
+    uint64 nats_reconnects = 14;          // NATS reconnection events
+
+    // ── BSSID baseline metrics ──
+    uint64 total_bssids = 20;             // Total unique BSSIDs ever seen
+    uint64 new_bssids_interval = 21;      // New BSSIDs discovered since last heartbeat
+
+    // ── Channel diversity metrics ──
+    uint32 distinct_channels = 22;        // Distinct frequencies observed in last interval
+
+    // ── tshark co-process metrics ──
+    uint64 tshark_lines = 30;            // Lines parsed from tshark JSON
+    uint64 tshark_detections = 31;       // Detections generated from tshark
+    uint32 tshark_restarts = 32;         // tshark process restart count
+
+    // ── BLE scanner metrics ──
+    uint64 ble_advertisements = 40;      // Total BLE adverts with UUID 0xFFFA seen
+    uint64 ble_detections = 41;          // Detections generated from BLE
+    bool   ble_scanning = 42;            // Whether BLE scanner is actively running
+    string ble_interface = 43;           // BLE adapter name (e.g., "hci0")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMANDS (Node → Tap)
+// ─────────────────────────────────────────────────────────────────────────────
+
+message TapCommand {
+    string tap_id = 1;                    // Target tap (or "*" for broadcast)
+    int64 timestamp_ns = 2;
+    string command_id = 3;                // For ack tracking
+
+    oneof command {
+        SetChannelsCommand set_channels = 10;
+        SetFilterCommand set_filter = 11;
+        RestartCommand restart = 12;
+        UpdateConfigCommand update_config = 13;
+        PingCommand ping = 14;
+    }
+}
+
+message SetChannelsCommand {
+    repeated int32 channels = 1;          // Channels to hop between
+    int32 hop_interval_ms = 2;            // Dwell time per channel
+}
+
+message SetFilterCommand {
+    string bpf_filter = 1;                // New BPF filter expression
+}
+
+message RestartCommand {
+    bool graceful = 1;                    // Wait for in-flight packets
+}
+
+message UpdateConfigCommand {
+    map<string, string> config = 1;       // Key-value config updates
+}
+
+message PingCommand {
+    int64 sent_at_ns = 1;
+}
+
+message TapCommandAck {
+    string tap_id = 1;
+    string command_id = 2;
+    bool success = 3;
+    string error_message = 4;
+    int64 latency_ns = 5;                 // For ping responses
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ALERTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+message Alert {
+    string alert_id = 1;
+    int64 timestamp_ns = 2;
+    AlertPriority priority = 3;
+    AlertType alert_type = 4;
+    string title = 5;
+    string message = 6;
+    string drone_identifier = 7;          // Related drone if applicable
+    string tap_id = 8;                    // Source tap if applicable
+    map<string, string> metadata = 9;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum DetectionSource {
+    SOURCE_UNKNOWN = 0;
+    SOURCE_WIFI_BEACON = 1;               // 802.11 Beacon with RemoteID IE
+    SOURCE_WIFI_NAN = 2;                  // WiFi Neighbor Awareness Networking
+    SOURCE_WIFI_PROBE_RESP = 3;           // Probe Response
+    SOURCE_BLUETOOTH_4 = 4;               // BT4 Legacy Advertising
+    SOURCE_BLUETOOTH_5 = 5;               // BT5 Long Range
+    SOURCE_DJI_OCUSYNC = 6;               // DJI proprietary (OcuSync/DroneID)
+    SOURCE_ADS_B = 7;                     // Future: ADS-B for larger drones
+    SOURCE_TSHARK_REMOTEID = 8;           // OpenDroneID via tshark dissector
+    SOURCE_TSHARK_SSID = 9;               // Drone SSID match via tshark
+}
+
+enum HeightReference {
+    HEIGHT_REF_UNKNOWN = 0;
+    HEIGHT_REF_TAKEOFF = 1;               // Above takeoff point
+    HEIGHT_REF_GROUND = 2;                // Above ground level (AGL)
+}
+
+enum OperatorLocationType {
+    OP_LOC_UNKNOWN = 0;
+    OP_LOC_TAKEOFF = 1;                   // Takeoff location
+    OP_LOC_LIVE_GNSS = 2;                 // Live GPS from controller
+    OP_LOC_FIXED = 3;                     // Pre-configured fixed location
+}
+
+enum UAVCategory {
+    UAV_CAT_UNKNOWN = 0;
+    UAV_CAT_UNDECLARED = 1;
+    UAV_CAT_AEROPLANE = 2;
+    UAV_CAT_HELICOPTER = 3;               // Including multirotor
+    UAV_CAT_GYROPLANE = 4;
+    UAV_CAT_HYBRID_LIFT = 5;              // VTOL fixed-wing
+    UAV_CAT_ORNITHOPTER = 6;
+    UAV_CAT_GLIDER = 7;
+    UAV_CAT_KITE = 8;
+    UAV_CAT_FREE_BALLOON = 9;
+    UAV_CAT_CAPTIVE_BALLOON = 10;
+    UAV_CAT_AIRSHIP = 11;
+    UAV_CAT_FREE_FALL = 12;               // Parachute/unpowered
+    UAV_CAT_ROCKET = 13;
+    UAV_CAT_GROUND_OBSTACLE = 14;
+    UAV_CAT_OTHER = 15;
+}
+
+enum OperationalStatus {
+    OP_STATUS_UNKNOWN = 0;
+    OP_STATUS_UNDECLARED = 1;
+    OP_STATUS_GROUND = 2;
+    OP_STATUS_AIRBORNE = 3;
+    OP_STATUS_EMERGENCY = 4;
+    OP_STATUS_REMOTE_ID_FAILURE = 5;
+}
+
+enum AlertPriority {
+    ALERT_INFO = 0;
+    ALERT_WARNING = 1;
+    ALERT_HIGH = 2;
+    ALERT_CRITICAL = 3;
+}
+
+enum AlertType {
+    ALERT_TYPE_UNKNOWN = 0;
+    ALERT_TYPE_NEW_DRONE = 1;
+    ALERT_TYPE_DRONE_LOST = 2;
+    ALERT_TYPE_SPOOF_DETECTED = 3;
+    ALERT_TYPE_ZONE_VIOLATION = 4;
+    ALERT_TYPE_LOW_TRUST = 5;
+    ALERT_TYPE_TAP_OFFLINE = 6;
+    ALERT_TYPE_TAP_ONLINE = 7;
+    ALERT_TYPE_SYSTEM_ERROR = 8;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NATS TOPICS
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// skylens.detections.{tap_id}     - Detection messages (Tap → Node)
+// skylens.heartbeats.{tap_id}     - Tap heartbeats (Tap → Node)
+// skylens.commands.{tap_id}       - Commands to specific tap (Node → Tap)
+// skylens.commands.broadcast      - Commands to all taps (Node → Taps)
+// skylens.alerts                  - System alerts (Node → Dashboard)
+// skylens.acks.{tap_id}           - Command acknowledgments (Tap → Node)
+//
+// ─────────────────────────────────────────────────────────────────────────────

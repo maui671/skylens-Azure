@@ -1,0 +1,410 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_USER="tdcadmin"
+APP_GROUP="tdcadmin"
+SRC_REPO="/home/tdcadmin/skylens"
+DEPLOY_ROOT="/opt/skylens"
+CONFIG_DIR="/etc/skylens"
+DATA_DIR="/var/lib/skylens"
+LOG_DIR="/var/log/skylens"
+CERT_DIR="/etc/skylens/certs"
+PGDATA="/var/lib/pgsql/data"
+DB_NAME="skylens"
+DB_USER="skylens"
+DB_PASS="skylens"
+JWT_SECRET_DEFAULT=""
+NATS_VERSION="2.12.5"
+
+LOG_FILE="${LOG_DIR}/skylens-install.log"
+mkdir -p "${LOG_DIR}"
+touch "${LOG_FILE}"
+chown "${APP_USER}:${APP_GROUP}" "${LOG_FILE}" || true
+
+exec > >(tee -a "${LOG_FILE}") 2>&1
+
+log()   { echo "[INFO] $*"; }
+warn()  { echo "[WARN] $*"; }
+fatal() { echo "[ERROR] $*"; exit 1; }
+run()   { echo "+ $*"; "$@"; }
+
+[[ $EUID -eq 0 ]] || fatal "Run as root"
+[[ -d "${SRC_REPO}" ]] || fatal "Source repo not found: ${SRC_REPO}"
+id "${APP_USER}" >/dev/null 2>&1 || fatal "User ${APP_USER} does not exist"
+
+log "Starting Skylens install"
+log "Source repo: ${SRC_REPO}"
+
+log "Installing packages"
+run dnf -y install rsync git gcc make openssl curl tar gzip nginx redis policycoreutils-python-utils firewalld
+
+log "Installing PostgreSQL 16 repo"
+run dnf -y install --nogpgcheck https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm || true
+
+if [[ -f /etc/yum.repos.d/pgdg-redhat-all.repo ]]; then
+  run sed -i 's|rhel-\$releasever-\$basearch|rhel-9-$basearch|g' /etc/yum.repos.d/pgdg-redhat-all.repo
+  run sed -i \
+    -e '/^\[pgdg18\]/,/^$/ s/^enabled=1/enabled=0/' \
+    -e '/^\[pgdg17\]/,/^$/ s/^enabled=1/enabled=0/' \
+    -e '/^\[pgdg15\]/,/^$/ s/^enabled=1/enabled=0/' \
+    -e '/^\[pgdg14\]/,/^$/ s/^enabled=1/enabled=0/' \
+    /etc/yum.repos.d/pgdg-redhat-all.repo
+fi
+
+run dnf -qy module disable postgresql || true
+run dnf clean all
+run dnf makecache --refresh
+run dnf -y --enablerepo=pgdg16,pgdg-common install postgresql16-server postgresql16
+
+if ! command -v nats-server >/dev/null 2>&1; then
+  log "Installing NATS Server"
+  if ! dnf -y install nats-server; then
+    if ! dnf -y install nats; then
+      run curl -L -o /tmp/nats-server.rpm "https://github.com/nats-io/nats-server/releases/download/v${NATS_VERSION}/nats-server-v${NATS_VERSION}-amd64.rpm"
+      run dnf -y install /tmp/nats-server.rpm
+    fi
+  fi
+fi
+
+GO_BIN=""
+for c in /usr/local/go/bin/go /bin/go /usr/bin/go; do
+  if [[ -x "$c" ]]; then
+    GO_BIN="$c"
+    break
+  fi
+done
+[[ -n "${GO_BIN}" ]] || fatal "Go compiler not found"
+log "Using Go binary: ${GO_BIN}"
+run "${GO_BIN}" version
+
+log "Creating directories"
+run install -d -m 0755 -o root -g root "${DEPLOY_ROOT}" "${CONFIG_DIR}" "${DATA_DIR}" "${LOG_DIR}" "${CERT_DIR}"
+run chown -R "${APP_USER}:${APP_GROUP}" "${DEPLOY_ROOT}" "${DATA_DIR}" "${LOG_DIR}"
+run chmod 0755 "${DEPLOY_ROOT}" "${DATA_DIR}" "${LOG_DIR}"
+
+log "Syncing repo into ${DEPLOY_ROOT}"
+run rsync -a --delete \
+  --exclude '.git' \
+  --exclude '.github' \
+  --exclude 'configs/config.yaml' \
+  --exclude 'build' \
+  --exclude 'dist' \
+  "${SRC_REPO}/" "${DEPLOY_ROOT}/"
+run chown -R "${APP_USER}:${APP_GROUP}" "${DEPLOY_ROOT}"
+
+log "Patching runtime lock file path"
+run sed -i 's|^const lockFile = ".*"|const lockFile = "/var/lib/skylens/skylens-node.lock"|' \
+  "${DEPLOY_ROOT}/cmd/skylens-node/main.go"
+
+log "Patching dashboard WebSocket URL for nginx TLS proxy"
+python3 - <<PY2
+log "Removing Tailscale UI from dashboard"
+python3 - <<PY
+from pathlib import Path
+root = Path("${DEPLOY_ROOT}")
+
+html = root / "internal/api/dashboard/static/index.html"
+js = root / "internal/api/dashboard/static/js/dashboard.js"
+css = root / "internal/api/dashboard/static/css/dashboard.css"
+
+h = html.read_text()
+h = h.replace('<span class="hdr-tailscale" id="hdr-tailscale" style="display:none"></span>', '')
+
+start = h.find('<!-- Tailscale Section -->')
+end = h.find('<!-- Node Info Section -->')
+if start != -1 and end != -1 and end > start:
+    h = h[:start] + h[end:]
+html.write_text(h)
+
+j = js.read_text()
+lines = []
+for line in j.splitlines():
+    if any(x in line for x in [
+        'hdr-tailscale',
+        'ts-connect-btn',
+        'ts-disconnect-btn',
+        'ts-logout-btn',
+        'ts-status-text',
+        'ts-ip-row',
+        'ts-hostname-row',
+        'ts-connect-form',
+        'ts-disconnect-form',
+        'ts-error',
+        'ts-success',
+        'renderTailscalePeers',
+        'handleTailscaleConnect',
+        'handleTailscaleDisconnect',
+        'handleTailscaleLogout',
+        'settingsData.tailscale',
+    ]):
+        continue
+    lines.append(line)
+js.write_text("\n".join(lines) + "\n")
+
+c = css.read_text().splitlines()
+out = []
+skip = False
+for line in c:
+    if not skip and '.hdr-tailscale' in line:
+        skip = True
+        continue
+    if skip:
+        if '}' in line:
+            skip = False
+        continue
+    out.append(line)
+css.write_text("\n".join(out) + "\n")
+
+print("removed tailscale dashboard ui from", root)
+PY
+from pathlib import Path
+p = Path("${DEPLOY_ROOT}/internal/api/dashboard/static/js/app.js")
+data = p.read_text()
+old = "var wsUrl = protocol + '//' + host + ':8081/ws' + (query || '');"
+new = "var wsUrl = protocol + '//' + window.location.host + '/ws' + (query || '');"
+if old in data:
+    p.write_text(data.replace(old, new, 1))
+    print("patched", p)
+elif new in data:
+    print("already patched", p)
+else:
+    raise SystemExit("websocket url line not found in app.js")
+PY2
+
+log "Building skylens-node"
+cd "${DEPLOY_ROOT}"
+run "${GO_BIN}" build -o /tmp/skylens-node ./cmd/skylens-node
+run install -m 0755 /tmp/skylens-node /usr/local/bin/skylens-node
+
+log "Creating config.yaml"
+if [[ -f "${DEPLOY_ROOT}/configs/config.example.yaml" ]]; then
+  run cp -f "${DEPLOY_ROOT}/configs/config.example.yaml" "${CONFIG_DIR}/config.yaml"
+else
+  fatal "Missing ${DEPLOY_ROOT}/configs/config.example.yaml"
+fi
+
+if [[ -z "${JWT_SECRET_DEFAULT}" ]]; then
+  JWT_SECRET_DEFAULT="$(openssl rand -base64 32)"
+fi
+
+python3 - <<PY3
+from pathlib import Path
+p = Path("${CONFIG_DIR}/config.yaml")
+text = p.read_text()
+
+repls = {
+    'host: "localhost"': 'host: "127.0.0.1"',
+    'password: ""           # Set your PostgreSQL password': 'password: "skylens"',
+    'url: "nats://localhost:4222"': 'url: "nats://127.0.0.1:4222"',
+    'url: "redis://localhost:6379"': 'url: "redis://127.0.0.1:6379"',
+}
+for old, new in repls.items():
+    text = text.replace(old, new)
+
+if 'jwt_secret: ""' in text:
+    text = text.replace('jwt_secret: ""', 'jwt_secret: "'"${JWT_SECRET_DEFAULT}"'"')
+elif 'jwt_secret:' not in text:
+    text += '\nauth:\n  enabled: true\n  jwt_secret: "'"${JWT_SECRET_DEFAULT}"'"\n'
+
+p.write_text(text)
+print("wrote", p)
+PY3
+
+run chown root:"${APP_GROUP}" "${CONFIG_DIR}/config.yaml"
+run chmod 0640 "${CONFIG_DIR}/config.yaml"
+
+log "Configuring PostgreSQL"
+run install -d -m 0700 -o postgres -g postgres "${PGDATA}"
+
+if [[ ! -f "${PGDATA}/PG_VERSION" ]]; then
+  run sudo -u postgres /usr/pgsql-16/bin/initdb -D "${PGDATA}"
+fi
+
+run install -d -m 0755 /etc/systemd/system/postgresql-16.service.d
+cat >/etc/systemd/system/postgresql-16.service.d/override.conf <<PGEOF
+[Service]
+Environment=PGDATA=${PGDATA}
+PGEOF
+
+run semanage fcontext -a -t postgresql_db_t "${PGDATA}(/.*)?" || true
+run restorecon -RFv "${PGDATA}" || true
+run chown -R postgres:postgres "${PGDATA}"
+run chmod 700 "${PGDATA}"
+
+if [[ -f "${PGDATA}/pg_hba.conf" ]]; then
+  run cp -f "${PGDATA}/pg_hba.conf" "${PGDATA}/pg_hba.conf.bak"
+  python3 - <<PY4
+from pathlib import Path
+p = Path("${PGDATA}/pg_hba.conf")
+text = p.read_text()
+text = text.replace("host    all             all             127.0.0.1/32            ident", "host    all             all             127.0.0.1/32            scram-sha-256")
+text = text.replace("host    all             all             ::1/128                 ident", "host    all             all             ::1/128                 scram-sha-256")
+text = text.replace("host    replication     all             127.0.0.1/32            ident", "host    replication     all             127.0.0.1/32            scram-sha-256")
+text = text.replace("host    replication     all             ::1/128                 ident", "host    replication     all             ::1/128                 scram-sha-256")
+p.write_text(text)
+print("patched", p)
+PY4
+fi
+
+run systemctl daemon-reload
+run systemctl enable --now postgresql-16
+
+log "Creating database and role"
+sudo -iu postgres psql -d postgres <<SQLEOF
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DB_USER}') THEN
+    CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PASS}';
+  ELSE
+    ALTER ROLE ${DB_USER} WITH LOGIN PASSWORD '${DB_PASS}';
+  END IF;
+END
+\$\$;
+
+SELECT 'CREATE DATABASE ${DB_NAME} OWNER ${DB_USER}'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '${DB_NAME}')\gexec
+
+ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER};
+GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};
+SQLEOF
+
+log "Configuring Redis"
+run install -d /etc/systemd/system/redis.service.d
+cat >/etc/systemd/system/redis.service.d/limit.conf <<'REDEOF'
+[Service]
+LimitNOFILE=65535
+REDEOF
+run systemctl daemon-reload
+run systemctl enable --now redis
+
+log "Configuring NATS"
+NATS_BIN="$(command -v nats-server || true)"
+[[ -n "${NATS_BIN}" ]] || fatal "nats-server binary not found after install"
+
+cat >/etc/nats-server.conf <<'NATSEOF'
+port: 4222
+http_port: 8222
+server_name: skylens
+NATSEOF
+
+cat >/etc/systemd/system/nats-server.service <<NATSSVC
+[Unit]
+Description=NATS Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=${NATS_BIN} -c /etc/nats-server.conf
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+NATSSVC
+
+run systemctl daemon-reload
+run systemctl enable --now nats-server
+
+log "Generating self-signed TLS cert"
+if [[ ! -f "${CERT_DIR}/skylens.crt" || ! -f "${CERT_DIR}/skylens.key" ]]; then
+  run openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+    -keyout "${CERT_DIR}/skylens.key" \
+    -out "${CERT_DIR}/skylens.crt" \
+    -subj "/CN=$(hostname -f)"
+fi
+run chown root:root "${CERT_DIR}/skylens.crt" "${CERT_DIR}/skylens.key"
+run chmod 600 "${CERT_DIR}/skylens.key"
+run chmod 644 "${CERT_DIR}/skylens.crt"
+
+log "Creating skylens-node systemd service"
+cat >/etc/systemd/system/skylens-node.service <<SVCEOF
+[Unit]
+Description=Skylens Node
+After=network-online.target postgresql-16.service redis.service nats-server.service
+Wants=network-online.target
+Requires=postgresql-16.service redis.service nats-server.service
+
+[Service]
+Type=simple
+User=${APP_USER}
+Group=${APP_GROUP}
+WorkingDirectory=${DEPLOY_ROOT}
+ExecStart=/usr/local/bin/skylens-node -config ${CONFIG_DIR}/config.yaml -log-format json -log-level info
+Restart=on-failure
+RestartSec=3
+Environment=HOME=/home/${APP_USER}
+Environment=GOMAXPROCS=4
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=skylens-node
+LimitNOFILE=65535
+ReadWritePaths=${DEPLOY_ROOT} ${DATA_DIR} ${LOG_DIR}
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+log "Creating nginx config"
+rm -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/skylens.conf
+cat >/etc/nginx/conf.d/skylens.conf <<'NGINXEOF'
+server {
+    listen 80;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name _;
+
+    ssl_certificate     /etc/skylens/certs/skylens.crt;
+    ssl_certificate_key /etc/skylens/certs/skylens.key;
+
+    client_max_body_size 25m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location /ws {
+        proxy_pass http://127.0.0.1:8081/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
+NGINXEOF
+
+run setsebool -P httpd_can_network_connect 1 || true
+run systemctl enable --now firewalld || true
+run firewall-cmd --permanent --add-service=http || true
+run firewall-cmd --permanent --add-service=https || true
+run firewall-cmd --permanent --add-port=4222/tcp || true
+run firewall-cmd --reload || true
+
+run systemctl daemon-reload
+run systemctl enable --now nginx
+run systemctl enable --now skylens-node
+
+log "Final status"
+run systemctl --no-pager -l status postgresql-16 || true
+run systemctl --no-pager -l status redis || true
+run systemctl --no-pager -l status nats-server || true
+run systemctl --no-pager -l status nginx || true
+run systemctl --no-pager -l status skylens-node || true
+
+run ss -ltnp || true
+
+log "Install complete"

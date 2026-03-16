@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — Profile</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<link rel="icon" type="image/svg+xml" href="/img/icon-192.svg">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/components.css">
+<style>
+.profile-content {
+    padding: 24px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hi) 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--bg0);
+    box-shadow: 0 4px 20px rgba(76,175,80,0.3);
+}
+
+.profile-info h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--t0);
+    margin-bottom: 4px;
+}
+
+.profile-info .role {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--accent-dim);
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+}
+
+.profile-section {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 24px;
+}
+
+.profile-section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.profile-section-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--t0);
+}
+
+.profile-section-body {
+    padding: 20px;
+}
+
+.info-row {
+    display: flex;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    width: 150px;
+    font-size: 13px;
+    color: var(--t2);
+}
+
+.info-value {
+    flex: 1;
+    font-size: 14px;
+    color: var(--t0);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--t2);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.form-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--t0);
+    font-family: var(--font);
+    font-size: 14px;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.form-help {
+    font-size: 12px;
+    color: var(--t3);
+    margin-top: 6px;
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hi) 100%);
+    border: none;
+    border-radius: 6px;
+    color: var(--bg0);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(76,175,80,0.3);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--t1);
+    font-family: var(--font);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--bg3);
+}
+
+.btn-danger {
+    color: var(--critical);
+    border-color: var(--critical);
+}
+
+.btn-danger:hover {
+    background: var(--critical-dim);
+}
+
+/* Sessions */
+.session-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.session-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--bg2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.session-item.current {
+    border-color: var(--accent);
+}
+
+.session-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--bg3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-right: 14px;
+}
+
+.session-info {
+    flex: 1;
+}
+
+.session-device {
+    font-size: 14px;
+    color: var(--t0);
+    margin-bottom: 2px;
+}
+
+.session-meta {
+    font-size: 12px;
+    color: var(--t2);
+}
+
+.session-current-badge {
+    padding: 3px 8px;
+    background: var(--accent-dim);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-right: 12px;
+}
+
+/* Messages */
+.message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.message.success {
+    background: var(--safe-dim);
+    border: 1px solid var(--safe);
+    color: var(--safe);
+}
+
+.message.error {
+    background: var(--critical-dim);
+    border: 1px solid var(--critical);
+    color: var(--critical);
+}
+
+.password-strength {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.strength-bar {
+    flex: 1;
+    max-width: 200px;
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.2s, background 0.2s;
+}
+
+.strength-label {
+    font-size: 12px;
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item active">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer" id="user-menu-container">
+    <!-- User menu will be rendered here -->
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+  <div class="profile-content">
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar" id="profile-avatar">?</div>
+      <div class="profile-info">
+        <h1 id="profile-name">Loading...</h1>
+        <span class="role" id="profile-role">-</span>
+      </div>
+    </div>
+
+    <!-- Account Info -->
+    <section class="profile-section">
+      <div class="profile-section-header">
+        <h2>Account Information</h2>
+      </div>
+      <div class="profile-section-body">
+        <div class="info-row">
+          <span class="info-label">Username</span>
+          <span class="info-value" id="info-username">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-value" id="info-email">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Role</span>
+          <span class="info-value" id="info-role">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Last Login</span>
+          <span class="info-value" id="info-last-login">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Account Created</span>
+          <span class="info-value" id="info-created">-</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Change Password -->
+    <section class="profile-section">
+      <div class="profile-section-header">
+        <h2>Change Password</h2>
+      </div>
+      <div class="profile-section-body">
+        <div id="password-message"></div>
+        <form id="password-form" onsubmit="changePassword(event)">
+          <div class="form-group">
+            <label class="form-label" for="current-password">Current Password</label>
+            <input type="password" id="current-password" class="form-input" required autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="new-password">New Password</label>
+            <input type="password" id="new-password" class="form-input" required autocomplete="new-password"
+                   oninput="updatePasswordStrength()">
+            <div class="password-strength">
+              <div class="strength-bar">
+                <div class="strength-fill" id="strength-fill"></div>
+              </div>
+              <span class="strength-label" id="strength-label">-</span>
+            </div>
+            <div class="form-help">Min 8 characters, uppercase, lowercase, digit, special character</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="confirm-password">Confirm New Password</label>
+            <input type="password" id="confirm-password" class="form-input" required autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn-primary" id="change-password-btn">Change Password</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Active Sessions -->
+    <section class="profile-section">
+      <div class="profile-section-header">
+        <h2>Active Sessions</h2>
+        <button class="btn-secondary btn-danger" onclick="revokeAllSessions()">Revoke All Others</button>
+      </div>
+      <div class="profile-section-body">
+        <div class="session-list" id="session-list">
+          <div style="color:var(--t2)">Loading sessions...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Session Configuration -->
+    <section class="profile-section">
+      <div class="profile-section-header">
+        <h2>Session Configuration</h2>
+      </div>
+      <div class="profile-section-body">
+        <div class="info-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px">
+          <div>
+            <div style="font-size:11px;color:var(--t3);margin-bottom:2px">Session Lifetime</div>
+            <div style="font-size:14px;font-weight:600;color:var(--t0)" id="cfg-session">--</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--t3);margin-bottom:2px">Auto-Refresh</div>
+            <div style="font-size:14px;font-weight:600;color:var(--t0)">Enabled</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-top:12px;font-style:italic">Session timeouts are configured by the system administrator.</div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+let user = null;
+
+(async function() {
+    // Wait for auth to be ready (HEAD script handles redirect)
+    await SkylensAuth.init();
+
+    // Load profile
+    user = SkylensAuth.getUser();
+    renderProfile();
+    loadSessions();
+    loadSessionConfig();
+    SkylensAuth.revealPage();
+})();
+
+async function loadSessionConfig() {
+    try {
+        const r = await SkylensAuth.fetch('/api/auth/password-requirements');
+        // Try to get session info from status endpoint
+        const sr = await SkylensAuth.fetch('/api/status');
+        const status = await sr.json();
+        const el = document.getElementById('cfg-session');
+        if (el) {
+            // If jwt_expiry is reported in status, show it
+            const exp = status.jwt_expiry_hours || status.session_hours;
+            if (exp && exp >= 8760) {
+                el.textContent = 'No expiry';
+            } else if (exp) {
+                el.textContent = exp + ' hours';
+            } else {
+                el.textContent = 'Persistent';
+            }
+        }
+    } catch (e) {
+        const el = document.getElementById('cfg-session');
+        if (el) el.textContent = 'Persistent';
+    }
+}
+
+function renderProfile() {
+    if (!user) return;
+
+    const initials = getInitials(user.display_name || user.username);
+
+    document.getElementById('profile-avatar').textContent = initials;
+    document.getElementById('profile-name').textContent = user.display_name || user.username;
+    document.getElementById('profile-role').textContent = user.role_name;
+
+    document.getElementById('info-username').textContent = user.username;
+    document.getElementById('info-email').textContent = user.email || 'Not set';
+    document.getElementById('info-role').textContent = user.role_name;
+    document.getElementById('info-last-login').textContent = user.last_login
+        ? formatDate(user.last_login)
+        : 'Never';
+    document.getElementById('info-created').textContent = formatDate(user.created_at);
+}
+
+async function loadSessions() {
+    try {
+        const response = await SkylensAuth.fetch('/api/auth/sessions');
+        const data = await response.json();
+        const sessions = data.sessions || [];
+
+        const container = document.getElementById('session-list');
+
+        if (sessions.length === 0) {
+            container.innerHTML = '<div style="color:var(--t2)">No active sessions</div>';
+            return;
+        }
+
+        container.innerHTML = sessions.map(s => {
+            const isCurrent = s.revoked_reason === 'current';
+            const device = parseUserAgent(s.user_agent);
+            const icon = device.icon;
+
+            return `
+                <div class="session-item ${isCurrent ? 'current' : ''}">
+                    <div class="session-icon">${icon}</div>
+                    <div class="session-info">
+                        <div class="session-device">${device.name}</div>
+                        <div class="session-meta">
+                            ${s.ip_address || 'Unknown IP'} &middot;
+                            Last active ${formatDate(s.last_activity)}
+                        </div>
+                    </div>
+                    ${isCurrent
+                        ? '<span class="session-current-badge">Current</span>'
+                        : `<button class="btn-secondary btn-danger" onclick="revokeSession('${s.id}')">Revoke</button>`
+                    }
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('Failed to load sessions:', err);
+    }
+}
+
+async function revokeSession(sessionId) {
+    if (!confirm('Revoke this session? The user will be logged out.')) return;
+
+    try {
+        const response = await SkylensAuth.fetch(`/api/auth/sessions/${sessionId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Failed to revoke session');
+        }
+
+        loadSessions();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function revokeAllSessions() {
+    if (!confirm('Revoke all other sessions? You will remain logged in, but all other devices will be logged out.')) return;
+
+    try {
+        // Get all sessions
+        const response = await SkylensAuth.fetch('/api/auth/sessions');
+        const data = await response.json();
+        const sessions = data.sessions || [];
+
+        // Revoke all except current
+        for (const s of sessions) {
+            if (s.revoked_reason !== 'current') {
+                await SkylensAuth.fetch(`/api/auth/sessions/${s.id}`, { method: 'DELETE' });
+            }
+        }
+
+        loadSessions();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function changePassword(e) {
+    e.preventDefault();
+
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    if (newPassword !== confirmPassword) {
+        showMessage('password-message', 'Passwords do not match', 'error');
+        return;
+    }
+
+    try {
+        const response = await SkylensAuth.fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Failed to change password');
+        }
+
+        showMessage('password-message', 'Password changed successfully. Other sessions have been logged out.', 'success');
+        document.getElementById('password-form').reset();
+        updatePasswordStrength();
+        loadSessions();
+    } catch (err) {
+        showMessage('password-message', err.message, 'error');
+    }
+}
+
+function updatePasswordStrength() {
+    const password = document.getElementById('new-password').value;
+    const fill = document.getElementById('strength-fill');
+    const label = document.getElementById('strength-label');
+
+    const strength = calculatePasswordStrength(password);
+
+    fill.style.width = strength.score + '%';
+
+    if (strength.score >= 80) {
+        fill.style.background = 'var(--accent)';
+        label.style.color = 'var(--accent)';
+    } else if (strength.score >= 60) {
+        fill.style.background = 'var(--safe)';
+        label.style.color = 'var(--safe)';
+    } else if (strength.score >= 40) {
+        fill.style.background = 'var(--caution)';
+        label.style.color = 'var(--caution)';
+    } else {
+        fill.style.background = 'var(--critical)';
+        label.style.color = 'var(--critical)';
+    }
+
+    label.textContent = strength.label;
+}
+
+function calculatePasswordStrength(password) {
+    if (!password) return { score: 0, label: '-' };
+
+    let score = 0;
+
+    // Length
+    if (password.length >= 8) score += 15;
+    if (password.length >= 12) score += 10;
+    if (password.length >= 16) score += 10;
+    if (password.length >= 20) score += 5;
+
+    // Character variety
+    if (/[a-z]/.test(password)) score += 10;
+    if (/[A-Z]/.test(password)) score += 10;
+    if (/[0-9]/.test(password)) score += 10;
+    if (/[^a-zA-Z0-9]/.test(password)) score += 10;
+
+    // Unique characters
+    const unique = new Set(password).size;
+    const ratio = unique / password.length;
+    if (ratio > 0.8) score += 20;
+    else if (ratio > 0.6) score += 15;
+    else if (ratio > 0.4) score += 10;
+
+    score = Math.min(100, score);
+
+    let label;
+    if (score >= 80) label = 'Strong';
+    else if (score >= 60) label = 'Good';
+    else if (score >= 40) label = 'Fair';
+    else if (score >= 20) label = 'Weak';
+    else label = 'Very Weak';
+
+    return { score, label };
+}
+
+function showMessage(containerId, message, type) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = `<div class="message ${type}">${escapeHtml(message)}</div>`;
+}
+
+function parseUserAgent(ua) {
+    if (!ua) return { name: 'Unknown Device', icon: '&#128187;' };
+
+    let name = 'Unknown Device';
+    let icon = '&#128187;'; // Desktop
+
+    if (/iPhone|iPad|iPod/.test(ua)) {
+        name = 'iOS Device';
+        icon = '&#128241;'; // Mobile
+    } else if (/Android/.test(ua)) {
+        name = 'Android Device';
+        icon = '&#128241;';
+    } else if (/Mac/.test(ua)) {
+        name = 'Mac';
+        icon = '&#128187;';
+    } else if (/Windows/.test(ua)) {
+        name = 'Windows PC';
+        icon = '&#128187;';
+    } else if (/Linux/.test(ua)) {
+        name = 'Linux';
+        icon = '&#128187;';
+    }
+
+    // Browser
+    if (/Chrome/.test(ua) && !/Edge/.test(ua)) {
+        name += ' (Chrome)';
+    } else if (/Firefox/.test(ua)) {
+        name += ' (Firefox)';
+    } else if (/Safari/.test(ua) && !/Chrome/.test(ua)) {
+        name += ' (Safari)';
+    } else if (/Edge/.test(ua)) {
+        name += ' (Edge)';
+    }
+
+    return { name, icon };
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.split(/[\s-_]+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
+
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' min ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' hours ago';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + ' days ago';
+
+    return date.toLocaleDateString();
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

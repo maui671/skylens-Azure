@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/png" href="/img/icon-192.png">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — TAK</title>
+<link rel="stylesheet" href="/css/dashboard.css">
+<style>
+/* ─── SETTINGS PAGE ─── */
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.settings-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px;
+}
+.settings-card.full-width {
+    grid-column: 1 / -1;
+}
+.card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--t0);
+    margin-bottom: 4px;
+}
+.card-desc {
+    font-size: 11px;
+    color: var(--t3);
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+.field-group {
+    margin-bottom: 14px;
+}
+.field-group:last-child {
+    margin-bottom: 0;
+}
+.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t1);
+    margin-bottom: 6px;
+}
+.field-hint {
+    font-size: 10px;
+    color: var(--t3);
+    margin-top: 3px;
+    font-style: italic;
+}
+.field-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.field-row .field-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* ─── TEXT INPUT ─── */
+.input-text {
+    width: 100%;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    color: var(--t0);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+.input-text:focus {
+    border-color: var(--accent);
+}
+.input-text::placeholder {
+    color: var(--t3);
+}
+
+/* ─── NUMBER INPUT ─── */
+.input-number {
+    width: 80px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    color: var(--t0);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    text-align: center;
+}
+.input-number:focus {
+    border-color: var(--accent);
+}
+
+/* ─── RANGE SLIDER ─── */
+.input-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    flex: 1;
+}
+.input-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg0);
+    box-shadow: 0 0 4px var(--accent-dim);
+}
+.input-range::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg0);
+    box-shadow: 0 0 4px var(--accent-dim);
+}
+
+/* ─── TOGGLE SWITCH ─── */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-child {
+    border-bottom: none;
+}
+.toggle-label-text {
+    font-size: 12px;
+    color: var(--t1);
+}
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.toggle-track {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    transition: background 0.2s, border-color 0.2s;
+}
+.toggle-track::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    bottom: 2px;
+    background: var(--t3);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+}
+.toggle-switch input:checked + .toggle-track {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+}
+.toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(16px);
+    background: var(--accent);
+}
+
+/* ─── BUTTONS ─── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    background: var(--bg3);
+    color: var(--t1);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--font);
+}
+.btn:hover {
+    border-color: var(--accent);
+    color: var(--t0);
+    background: var(--accent-dim);
+}
+.btn:active {
+    transform: scale(0.97);
+}
+.btn-accent {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.btn-accent:hover {
+    background: var(--accent);
+    color: var(--bg0);
+}
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+/* ─── STATUS ─── */
+.tak-status-ok {
+    color: var(--safe);
+    font-weight: 600;
+    font-style: normal;
+    font-size: 12px;
+}
+.tak-status-off {
+    color: var(--t3);
+    font-size: 12px;
+}
+.tak-status-err {
+    color: var(--critical);
+    font-size: 12px;
+}
+
+/* ─── CERT UPLOAD ─── */
+.cert-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.cert-row:last-child {
+    margin-bottom: 0;
+}
+.cert-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t1);
+    min-width: 90px;
+}
+.cert-file {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--t2);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.cert-file.loaded {
+    color: var(--safe);
+}
+.cert-upload-btn {
+    padding: 5px 12px;
+    font-size: 11px;
+}
+.cert-upload-input {
+    display: none;
+}
+
+/* ─── STATUS TOAST ─── */
+.toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 10px 18px;
+    border-radius: var(--r);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--bg0);
+    background: var(--accent);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+}
+.toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.toast.error {
+    background: var(--critical);
+    color: #fff;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1000px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    .settings-card.full-width {
+        grid-column: 1;
+    }
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+      <span class="sb-badge" id="sb-badge-fleet"></span>
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+      <span class="sb-badge" id="sb-badge-alerts"></span>
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item active">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div id="user-menu-container"></div>
+    <div class="sb-version">v0.1.0</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+
+  <!-- Header Bar -->
+  <header id="hdr">
+    <div class="hdr-left">
+      <h1>TAK</h1>
+      <span class="hdr-node" id="hdr-node">Push drone detections to TAK (ATAK/WinTAK/iTAK)</span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-conn" id="hdr-conn">
+        <span class="hdr-dot green"></span> Connected
+      </span>
+      <span class="hdr-clock" id="hdr-clock"></span>
+    </div>
+  </header>
+
+  <div class="settings-grid">
+
+    <!-- Connection -->
+    <div class="settings-card">
+      <div class="card-title">Connection</div>
+      <div class="card-desc">Configure the TAK address and transport. Get the address and port from your TAK admin.</div>
+
+      <div class="field-group">
+        <label class="field-label">Status</label>
+        <div id="tak-status" class="field-hint tak-status-off">Checking...</div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="tak-address">Server Address</label>
+        <input type="text" class="input-text" id="tak-address" placeholder="tak.example.com:8089" autocomplete="off" spellcheck="false">
+        <div class="field-hint">Host and port of the TAK streaming input.</div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <span class="toggle-label-text">Use TLS</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="tak-use-tls" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="field-hint">Enable TLS encryption (recommended). Requires certificates below.</div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Last Error</label>
+        <div id="tak-last-error" class="field-hint tak-status-err" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Certificates -->
+    <div class="settings-card">
+      <div class="card-title">Certificates</div>
+      <div class="card-desc">Upload TLS certificates for TAK authentication. Export from TAK as PEM files.</div>
+
+      <div class="cert-row">
+        <span class="cert-label">Client Cert</span>
+        <span class="cert-file" id="tak-cert-file">Not uploaded</span>
+        <input type="file" class="cert-upload-input" id="tak-cert-input" accept=".pem,.p12,.crt">
+        <button class="btn cert-upload-btn" onclick="document.getElementById('tak-cert-input').click()">Upload</button>
+      </div>
+
+      <div class="cert-row">
+        <span class="cert-label">Client Key</span>
+        <span class="cert-file" id="tak-key-file">Not uploaded</span>
+        <input type="file" class="cert-upload-input" id="tak-key-input" accept=".pem,.key">
+        <button class="btn cert-upload-btn" onclick="document.getElementById('tak-key-input').click()">Upload</button>
+      </div>
+
+      <div class="cert-row">
+        <span class="cert-label">CA / Truststore</span>
+        <span class="cert-file" id="tak-ca-file">Not uploaded</span>
+        <input type="file" class="cert-upload-input" id="tak-ca-input" accept=".pem,.crt">
+        <button class="btn cert-upload-btn" onclick="document.getElementById('tak-ca-input').click()">Upload</button>
+      </div>
+    </div>
+
+    <!-- Output Settings -->
+    <div class="settings-card">
+      <div class="card-title">Output Settings</div>
+      <div class="card-desc">Control what gets sent to TAK and how often.</div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <span class="toggle-label-text">Enable TAK Output</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="tak-enabled">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="tak-rate-limit">Rate Limit (seconds per drone)</label>
+        <div class="field-row">
+          <input type="range" class="input-range" id="tak-rate-limit" min="1" max="30" step="1" value="3">
+          <span class="field-value" id="tak-rate-limit-val">3s</span>
+        </div>
+        <div class="field-hint">Minimum time between position updates per drone. Lower = more traffic.</div>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="tak-stale-time">Stale Time (seconds)</label>
+        <div class="field-row">
+          <input type="range" class="input-range" id="tak-stale-time" min="10" max="300" step="5" value="30">
+          <span class="field-value" id="tak-stale-time-val">30s</span>
+        </div>
+        <div class="field-hint">How long markers stay on TAK before expiring if no update is sent.</div>
+      </div>
+
+      <div class="field-group">
+        <div class="toggle-row">
+          <span class="toggle-label-text">Send Controllers</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="tak-send-controllers">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="field-hint">Also push DJI RC controller positions to TAK.</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="settings-card">
+      <div class="card-title">Actions</div>
+      <div class="card-desc">Save configuration and test connectivity.</div>
+
+      <div class="btn-row">
+        <button class="btn btn-accent" id="tak-save-btn" onclick="saveTAK()">Save Settings</button>
+        <button class="btn" id="tak-test-btn" onclick="testTAK()">Test Connection</button>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="/js/tak.js?v=20260305"></script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — Airspace</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SKYLENS">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/svg+xml" href="/img/icon-192.svg">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="/css/style.css">
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth();</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body class="airspace-page">
+
+<!-- ═══ TOOLBAR ═══ -->
+<div id="toolbar">
+  <div class="tb-brand">
+    <a href="/" class="tb-back" title="Back to Dashboard">◂ DASH</a>
+    <span class="tb-logo">SKYLENS</span>
+    <span class="tb-sub">AIRSPACE MONITOR</span>
+  </div>
+  <div class="tb-group">
+    <button class="tb-btn" id="tb-refresh" title="Refresh (F5)">Refresh</button>
+    <button class="tb-btn" id="tb-fit" title="Fit All (Ctrl+F)">Fit All</button>
+    <button class="tb-btn tb-tog" id="tb-autofollow" title="Auto-Follow Selected (F)">Follow</button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn tb-tog on" id="tb-trails" title="Toggle Trails (T)">Trails</button>
+    <button class="tb-btn tb-tog on" id="tb-zones" title="Toggle Zones (Z)">Zones</button>
+    <button class="tb-btn tb-tog on" id="tb-threats" title="Threat Rings (R)">Threats</button>
+    <button class="tb-btn tb-tog on" id="tb-operators" title="Operators (O)">Operators</button>
+    <button class="tb-btn tb-tog" id="tb-vectors" title="Speed Vectors (V)">Vectors</button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn" id="tb-measure" title="Measure (M)">Measure</button>
+    <button class="tb-btn" id="tb-fullscreen" title="Fullscreen Map (G)">Fullscreen</button>
+    <button class="tb-btn" id="tb-draw" title="Draw">Draw</button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn tb-tog on" id="tb-show-lost" title="Show Lost Contacts (L)">Show Lost</button>
+    <button class="tb-btn" id="tb-dismiss-lost" title="Hide All Lost">Hide Lost</button>
+    <button class="tb-btn tb-tog" id="tb-show-controllers" title="Show Controllers (C)">Controllers</button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn" id="tb-export" title="Export (Ctrl+E)">Export</button>
+    <button class="tb-btn" id="tb-zone-mgr" title="Zone Manager">Zones</button>
+    <button class="tb-btn" id="tb-inject" title="Test Injection">Inject</button>
+    <span class="tb-sep"></span>
+    <button class="tb-btn tb-tog" id="tb-ranges" title="Range Rings (double-click to manage)">Range</button>
+  </div>
+  <div class="tb-end">
+    <button class="tb-btn" id="tb-settings" title="Settings (Ctrl+,)">Settings</button>
+    <button class="tb-btn" id="tb-shortcuts" title="Shortcuts (F1)">?</button>
+  </div>
+</div>
+
+<!-- ═══ THREAT BAR ═══ -->
+<div id="threat-bar">
+  <div class="thb-left">
+    <div class="thb-ctr critical"><span class="thb-dot"></span><span class="thb-lbl">CRITICAL</span><span class="thb-v" id="thb-critical">0</span></div>
+    <div class="thb-ctr warning"><span class="thb-dot"></span><span class="thb-lbl">WARNING</span><span class="thb-v" id="thb-warning">0</span></div>
+    <div class="thb-ctr active"><span class="thb-dot"></span><span class="thb-lbl">ACTIVE</span><span class="thb-v" id="thb-active">0</span></div>
+  </div>
+  <div class="thb-right">
+    <div class="thb-stat"><span class="thb-sl">SENSORS</span><span class="thb-sv" id="thb-sensors">0/0</span></div>
+    <div class="thb-conn"><span class="thb-cdot" id="conn-dot"></span><span id="conn-text">OFFLINE</span></div>
+    <div class="thb-clock" id="hdr-clock">--:--:--</div>
+  </div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<main id="main-area">
+
+  <!-- LEFT: CONTACTS -->
+  <aside id="panel-left">
+    <div class="pl-hdr"><span class="pl-t">CONTACTS</span><span class="pl-n" id="n-contacts">0</span></div>
+    <div class="pl-search"><input type="text" id="uav-search" placeholder="Search contacts... (Ctrl+Shift+F)" autocomplete="off" spellcheck="false"></div>
+    <div class="pl-filters" id="filter-chips">
+      <button class="fchip" data-filter="no-rid">No RID</button>
+      <button class="fchip" data-filter="high-threat">High Threat</button>
+      <button class="fchip" data-filter="moving">Moving</button>
+      <button class="fchip" data-filter="high-alt">High Alt</button>
+      <button class="fchip fc-clear" id="filter-clear" style="display:none">Clear All</button>
+    </div>
+    <div class="pl-lost-bar">
+      <label class="lost-toggle" title="Show/hide lost contacts (L)">
+        <input type="checkbox" id="show-lost-cb" checked> Show Lost
+        <span class="lost-count" id="lost-count">0</span>
+      </label>
+      <button class="lost-hide-btn" id="hide-all-lost" title="Hide all lost contacts from database">HIDE ALL LOST</button>
+    </div>
+    <div class="pl-sort">
+      <select id="uav-sort">
+        <option value="time">Sort: Recent</option>
+        <option value="threat">Sort: Threat</option>
+        <option value="signal">Sort: Signal</option>
+        <option value="name">Sort: Name</option>
+        <option value="altitude">Sort: Altitude</option>
+      </select>
+      <div class="view-btns">
+        <button class="vbtn on" id="view-detailed" title="Detailed view">&#9776;</button>
+        <button class="vbtn" id="view-compact" title="Compact view">&#8801;</button>
+      </div>
+    </div>
+    <div id="uav-list" class="uav-list"></div>
+  </aside>
+
+  <!-- CENTER: MAP -->
+  <section id="map-section">
+    <div id="map"></div>
+    <div id="map-hud" class="map-hud"></div>
+    <div id="draw-toolbar" class="draw-tb" style="display:none">
+      <button class="dtb" data-draw="polyline">LINE</button>
+      <button class="dtb" data-draw="polygon">POLYGON</button>
+      <button class="dtb" data-draw="circle">CIRCLE</button>
+      <button class="dtb" data-draw="rectangle">RECT</button>
+      <button class="dtb" data-draw="marker">MARKER</button>
+      <button class="dtb warn" id="draw-clear">CLEAR</button>
+      <button class="dtb" id="draw-close">&#10005;</button>
+    </div>
+    <div id="measure-bar" class="meas-bar" style="display:none">
+      <span id="measure-val">0 m</span>
+      <button class="meas-btn" id="measure-clear">CLEAR</button>
+      <button class="meas-btn" id="measure-close">&#10005;</button>
+    </div>
+  </section>
+
+  <!-- RIGHT: DETAIL -->
+  <aside id="panel-right">
+    <div id="detail-empty" class="det-empty">
+      <div class="de-icon">&#9678;</div>
+      <div class="de-txt">Select a contact<br>to view details</div>
+      <div class="de-hint">Click a UAV marker or contact card</div>
+    </div>
+    <div id="detail-view" style="display:none"></div>
+  </aside>
+
+</main>
+
+<!-- ═══ ALERT PANEL ═══ -->
+<div id="alert-panel">
+  <div class="ap-hdr">
+    <div class="ap-tabs" id="alert-tabs">
+      <button class="aptab on" data-pri="all">ALL <span class="ap-badge" id="alert-count">0</span></button>
+      <button class="aptab" data-pri="critical">CRITICAL</button>
+      <button class="aptab" data-pri="high">HIGH</button>
+      <button class="aptab" data-pri="medium">MEDIUM</button>
+      <button class="aptab" data-pri="low">LOW</button>
+    </div>
+    <div class="ap-acts">
+      <button class="ap-btn" id="alert-sound" title="Toggle Sound (S)">Sound On</button>
+      <button class="ap-btn" id="alert-ack" title="Acknowledge All (A)">Ack All</button>
+      <button class="ap-btn" id="alert-exp" title="Export Alerts">Export</button>
+    </div>
+  </div>
+  <div id="alert-list" class="ap-list"></div>
+</div>
+
+<!-- ═══ STATUS BAR ═══ -->
+<footer id="status-bar">
+  <div class="sb-l">
+    <span class="sb-i">UAVs: <b id="sb-uavs">0</b></span>
+    <span class="sb-d">|</span>
+    <span class="sb-i">Msgs: <b id="sb-msgs">0</b></span>
+    <span class="sb-d">|</span>
+    <span class="sb-i">Frames: <b id="sb-hb">0</b></span>
+    <span class="sb-d">|</span>
+    <span class="sb-i">Alerts: <b id="sb-alerts">0</b></span>
+  </div>
+  <div class="sb-c">
+    <span class="sb-i">Sensors: <b id="sb-sensors">0/0</b></span>
+    <span class="sb-d">|</span>
+    <span class="sb-i">Rate: <b id="sb-rate">0</b>/s</span>
+    <span class="sb-d">|</span>
+    <span class="sb-i">Queue: <b id="sb-queue">0</b></span>
+  </div>
+  <div class="sb-r">
+    <span class="sb-i sb-node" id="sb-node">NODE: --</span>
+    <span class="sb-d">|</span>
+    <span class="sb-i">UP: <b id="sb-uptime">--</b></span>
+    <span class="sb-d">|</span>
+    <span class="sb-i sb-ts" id="sb-updated">--</span>
+  </div>
+</footer>
+
+<!-- ═══ MODAL BACKDROP ═══ -->
+<div id="modal-bg" class="modal-bg" style="display:none"></div>
+
+<!-- ═══ SETTINGS MODAL ═══ -->
+<div id="modal-settings" class="modal" style="display:none">
+  <div class="m-hdr"><span class="m-title">SETTINGS</span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body">
+    <div class="m-tabs">
+      <button class="m-tab on" data-st="map">Map</button>
+      <button class="m-tab" data-st="display">Display</button>
+      <button class="m-tab" data-st="alerts">Alerts</button>
+      <button class="m-tab" data-st="about">About</button>
+    </div>
+    <div class="m-pane on" data-sp="map">
+      <label class="mf"><span>Map Style</span><select id="set-style"><option value="satellite">Satellite</option><option value="terrain">Terrain (OSM)</option><option value="dark">Dark (CartoDB)</option></select></label>
+      <label class="mf"><span>Trail Length (points)</span><input type="range" id="set-trail" min="10" max="500" value="100"><output id="set-trail-v">100</output></label>
+      <label class="mf"><span>Poll Interval</span><select id="set-poll"><option value="1000" selected>1s (default)</option><option value="2000">2s</option><option value="3000">3s</option><option value="5000">5s (slow)</option></select></label>
+      <label class="mf"><span>Threat Ring Radius (m)</span><input type="number" id="set-ring" value="500" min="50" max="5000" step="50"></label>
+    </div>
+    <div class="m-pane" data-sp="display">
+      <label class="mf chk"><input type="checkbox" id="set-compact"><span>Compact UAV cards</span></label>
+      <label class="mf chk"><input type="checkbox" id="set-hide-right"><span>Auto-hide detail panel</span></label>
+    </div>
+    <div class="m-pane" data-sp="alerts">
+      <label class="mf chk"><input type="checkbox" id="set-sound" checked><span>Sound alerts</span></label>
+      <label class="mf chk"><input type="checkbox" id="set-alert-new" checked><span>Alert on new contact</span></label>
+      <label class="mf chk"><input type="checkbox" id="set-alert-threat" checked><span>Alert on high threat</span></label>
+      <label class="mf chk"><input type="checkbox" id="set-alert-lost" checked><span>Alert on contact lost</span></label>
+      <label class="mf chk"><input type="checkbox" id="set-show-controllers"><span>Show DJI RC controllers</span></label>
+    </div>
+    <div class="m-pane" data-sp="about">
+      <div class="about"><div class="about-logo">SKYLENS</div><div class="about-sub">AIRSPACE MONITOR v1.0</div><p>Real-time drone detection &amp; threat assessment dashboard for skylens-node.</p><p class="about-sm">Tactical command interface for UAV/drone monitoring, threat assessment, and airspace security operations.</p></div>
+    </div>
+  </div>
+  <div class="m-foot"><button class="mbtn primary" id="set-save">SAVE</button><button class="mbtn" id="set-defaults">DEFAULTS</button></div>
+</div>
+
+<!-- ═══ INJECTION MODAL ═══ -->
+<div id="modal-inject" class="modal lg" style="display:none">
+  <div class="m-hdr"><span class="m-title">TEST INJECTION</span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body">
+    <div class="m-tabs">
+      <button class="m-tab on" data-it="single">Single</button>
+      <button class="m-tab" data-it="presets">Presets</button>
+      <button class="m-tab" data-it="swarm">Swarm</button>
+      <button class="m-tab" data-it="manage">Manage</button>
+    </div>
+    <div class="m-pane on" data-ip="single">
+      <p class="mp">Inject a single test drone into the pipeline for system verification.</p>
+      <button class="mbtn primary" id="inj-one">INJECT TEST DRONE</button>
+      <div class="inj-out" id="inj-out-1"></div>
+    </div>
+    <div class="m-pane" data-ip="presets">
+      <p class="mp">Inject a drone with a specific profile.</p>
+      <div class="preset-grid">
+        <button class="pbtn" data-preset="dji-mavic">DJI Mavic 3</button>
+        <button class="pbtn" data-preset="dji-mini">DJI Mini 4</button>
+        <button class="pbtn" data-preset="parrot-anafi">Parrot Anafi</button>
+        <button class="pbtn" data-preset="autel-evo">Autel EVO II</button>
+        <button class="pbtn" data-preset="skydio-2">Skydio 2+</button>
+        <button class="pbtn hostile" data-preset="hostile">Hostile (No RID)</button>
+      </div>
+      <div class="inj-out" id="inj-out-p"></div>
+    </div>
+    <div class="m-pane" data-ip="swarm">
+      <p class="mp">Inject multiple test drones simultaneously.</p>
+      <div class="swarm-row">
+        <select id="swarm-n"><option value="3">3 drones</option><option value="5" selected>5 drones</option><option value="10">10 drones</option><option value="20">20 drones</option></select>
+        <button class="mbtn primary" id="inj-swarm">INJECT SWARM</button>
+      </div>
+      <div class="inj-out" id="inj-out-s"></div>
+    </div>
+    <div class="m-pane" data-ip="manage">
+      <p class="mp">Remove all test-injected drones from the system.</p>
+      <button class="mbtn warn" id="inj-clear">CLEAR ALL TEST DATA</button>
+      <div class="inj-out" id="inj-out-m"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ZONE MANAGER MODAL ═══ -->
+<div id="modal-zones" class="modal lg" style="display:none">
+  <div class="m-hdr"><span class="m-title">ZONE MANAGER</span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body">
+    <div class="zone-wrap">
+      <div id="zone-list" class="zone-list"></div>
+      <div class="zone-acts">
+        <select id="zone-type"><option value="restricted">Restricted (Red)</option><option value="alert">Alert (Orange)</option><option value="warning">Warning (Yellow)</option><option value="safe">Safe (Green)</option></select>
+        <input type="text" id="zone-name" placeholder="Zone name..." maxlength="32">
+        <button class="mbtn primary" id="zone-start">DRAW ON MAP</button>
+        <button class="mbtn warn" id="zone-clear-all">CLEAR ALL</button>
+      </div>
+    </div>
+    <p class="mp">Click "Draw on Map" then click points on the map to define the zone polygon. Double-click to finish.</p>
+  </div>
+</div>
+
+<!-- ═══ RANGE RING MANAGER MODAL ═══ -->
+<div id="modal-ranges" class="modal lg" style="display:none">
+  <div class="m-hdr"><span class="m-title">RANGE RINGS</span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body">
+    <div id="range-list" class="zone-list"></div>
+    <div class="zone-acts">
+      <select id="range-tap"></select>
+      <input type="number" id="range-dist" placeholder="Distance (km)" step="0.1" min="0.1" max="50">
+      <input type="text" id="range-name" placeholder="Label (optional)" maxlength="32">
+      <div id="range-colors" class="range-color-grid"></div>
+      <button class="mbtn primary" id="range-add">ADD RING</button>
+      <button class="mbtn warn" id="range-clear-all">CLEAR ALL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FLIGHT HISTORY MODAL ═══ -->
+<div id="modal-history" class="modal lg" style="display:none">
+  <div class="m-hdr"><span class="m-title">FLIGHT HISTORY</span><span class="m-sub" id="hist-name"></span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body">
+    <div id="hist-day-selector" class="hist-day-selector"></div>
+    <div id="hist-stats" class="hist-stats"></div>
+    <div id="hist-map" style="height:220px;border-radius:4px;margin:8px 0;border:1px solid var(--border)"></div>
+    <div id="hist-replay-section"></div>
+    <canvas id="hist-canvas" height="100" style="width:100%;margin:8px 0"></canvas>
+    <div class="hist-acts">
+      <button class="mbtn" id="hist-csv">EXPORT CSV</button>
+      <button class="mbtn" id="hist-json">EXPORT JSON</button>
+      <button class="mbtn" id="hist-kml">EXPORT KML</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SHORTCUTS MODAL ═══ -->
+<div id="modal-shortcuts" class="modal" style="display:none">
+  <div class="m-hdr"><span class="m-title">KEYBOARD SHORTCUTS</span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body">
+    <table class="kb-table">
+      <tr class="kb-cat"><td colspan="2">Navigation</td></tr>
+      <tr><td><kbd>&#8593;</kbd> <kbd>&#8595;</kbd></td><td>Navigate contacts</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Clear selection / Close modal</td></tr>
+      <tr><td><kbd>Ctrl+Shift+F</kbd></td><td>Focus search</td></tr>
+      <tr class="kb-cat"><td colspan="2">Map</td></tr>
+      <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Zoom in / out</td></tr>
+      <tr><td><kbd>Ctrl+F</kbd></td><td>Fit all markers</td></tr>
+      <tr><td><kbd>T</kbd></td><td>Toggle trails</td></tr>
+      <tr><td><kbd>Z</kbd></td><td>Toggle zones</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Toggle threat rings</td></tr>
+      <tr><td><kbd>O</kbd></td><td>Toggle operators</td></tr>
+      <tr><td><kbd>V</kbd></td><td>Toggle speed vectors</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Measure distance</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Toggle auto-follow</td></tr>
+      <tr><td><kbd>G</kbd></td><td>Fullscreen map</td></tr>
+      <tr><td><kbd>L</kbd></td><td>Toggle lost contacts</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Toggle controllers</td></tr>
+      <tr class="kb-cat"><td colspan="2">Alerts</td></tr>
+      <tr><td><kbd>A</kbd></td><td>Acknowledge all</td></tr>
+      <tr><td><kbd>S</kbd></td><td>Toggle sound</td></tr>
+      <tr class="kb-cat"><td colspan="2">General</td></tr>
+      <tr><td><kbd>F5</kbd></td><td>Refresh</td></tr>
+      <tr><td><kbd>Ctrl+E</kbd></td><td>Export</td></tr>
+      <tr><td><kbd>Ctrl+,</kbd></td><td>Settings</td></tr>
+      <tr><td><kbd>?</kbd> / <kbd>F1</kbd></td><td>Shortcuts</td></tr>
+      <tr class="kb-cat"><td colspan="2">Panels</td></tr>
+      <tr><td><kbd>1</kbd></td><td>Toggle contacts panel</td></tr>
+      <tr><td><kbd>2</kbd></td><td>Toggle detail panel</td></tr>
+      <tr><td><kbd>3</kbd></td><td>Toggle alerts panel</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ EXPORT MODAL ═══ -->
+<div id="modal-export" class="modal" style="display:none">
+  <div class="m-hdr"><span class="m-title">EXPORT DATA</span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body">
+    <div class="exp-grid">
+      <button class="exp-btn" id="exp-uav-csv">UAV List (CSV)</button>
+      <button class="exp-btn" id="exp-uav-json">UAV List (JSON)</button>
+      <button class="exp-btn" id="exp-alerts-csv">Alerts (CSV)</button>
+      <button class="exp-btn" id="exp-alerts-json">Alerts (JSON)</button>
+      <button class="exp-btn" id="exp-sensors">Sensors (JSON)</button>
+      <button class="exp-btn" id="exp-geojson">UAVs (GeoJSON)</button>
+      <button class="exp-btn" id="exp-all">Full Snapshot (JSON)</button>
+    </div>
+    <div class="exp-out" id="exp-out"></div>
+  </div>
+</div>
+
+<!-- ═══ TAG POPUP ═══ -->
+<div id="tag-popup" class="tag-pop" style="display:none">
+  <button class="tag-o" data-tag="friendly" style="--tc:#00E676">Friendly</button>
+  <button class="tag-o" data-tag="suspicious" style="--tc:#FF6D00">Suspicious</button>
+  <button class="tag-o" data-tag="hostile" style="--tc:#FF1744">Hostile</button>
+  <button class="tag-o" data-tag="monitored" style="--tc:#AA00FF">Monitored</button>
+  <button class="tag-o" data-tag="vip" style="--tc:#FF4081">VIP</button>
+  <button class="tag-o" data-tag="ignored" style="--tc:#78909C">Ignored</button>
+  <button class="tag-o" data-tag="">Clear Tag</button>
+</div>
+
+<!-- ═══ SIGHTINGS MODAL ═══ -->
+<div id="sightings-modal" class="modal" style="display:none">
+  <div class="m-hdr"><span class="m-title">UAV SIGHTINGS</span><button class="m-x" data-close>&#10005;</button></div>
+  <div class="m-body" id="sightings-body"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/js/mgrs.js"></script>
+<script src="/js/range-rings.js"></script>
+<script src="/js/activity-heatmap.js"></script>
+<script src="/js/decision-support.js"></script>
+<script src="/js/map.js?v=20260304"></script>
+<script src="/js/ui.js?v=20260304"></script>
+<script src="/js/dialogs.js?v=20260228b"></script>
+<script src="/js/app.js?v=20260304b"></script>
+<script>
+// Register Service Worker for PWA support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(function(registration) {
+        console.log('SKYLENS: Service Worker registered', registration.scope);
+
+        // Check for updates
+        registration.addEventListener('updatefound', function() {
+          var newWorker = registration.installing;
+          newWorker.addEventListener('statechange', function() {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('SKYLENS: New version available');
+              if (confirm('A new version of SKYLENS is available. Reload to update?')) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            }
+          });
+        });
+      })
+      .catch(function(error) {
+        console.warn('SKYLENS: Service Worker registration failed', error);
+      });
+  });
+}
+
+// Cache drone state periodically for offline viewing
+setInterval(function() {
+  if (navigator.serviceWorker.controller && window.App && window.App.state) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'CACHE_DRONE_STATE',
+      state: {
+        stats: window.App.state.stats,
+        uavs: window.App.state.uavs,
+        taps: window.App.state.taps,
+        alerts: window.App.state.alerts,
+        uptime: window.App.state.uptime
+      }
+    });
+  }
+}, 30000);
+</script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

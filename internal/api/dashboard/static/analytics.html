@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — Analytics</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<link rel="icon" type="image/svg+xml" href="/img/icon-192.svg">
+<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="/css/components.css">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANALYTICS PAGE STYLES
+   Single-page layout, mobile-friendly grid
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Time Range Selector */
+.time-range-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.time-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--mono);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--t2);
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.time-btn:hover { background: var(--bg3); color: var(--t1); border-color: var(--border-hi); }
+.time-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.time-range-label {
+    font-size: 11px;
+    color: var(--t3);
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* KPI Summary Row */
+.analytics-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.analytics-kpi {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    text-align: center;
+}
+.analytics-kpi-val {
+    font-size: 26px;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--t0);
+    line-height: 1.1;
+}
+.analytics-kpi-val.accent { color: var(--accent); }
+.analytics-kpi-val.warning { color: var(--warning); }
+.analytics-kpi-val.critical { color: var(--critical); }
+.analytics-kpi-val.safe { color: var(--safe); }
+.analytics-kpi-label {
+    font-size: 10px;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+.analytics-kpi-sub {
+    font-size: 11px;
+    color: var(--t2);
+    margin-top: 2px;
+    font-family: var(--mono);
+}
+.analytics-kpi-change {
+    font-size: 11px;
+    font-family: var(--mono);
+    margin-top: 4px;
+}
+.analytics-kpi-change.up { color: var(--safe); }
+.analytics-kpi-change.down { color: var(--critical); }
+.analytics-kpi-change.neutral { color: var(--t3); }
+
+/* Analytics Grid */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+}
+.analytics-card {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+}
+.analytics-card.span-6 { grid-column: span 6; }
+.analytics-card.span-4 { grid-column: span 4; }
+.analytics-card.span-3 { grid-column: span 3; }
+.analytics-card.span-8 { grid-column: span 8; }
+.analytics-card.span-12 { grid-column: span 12; }
+
+@media (max-width: 1200px) {
+    .analytics-card.span-6,
+    .analytics-card.span-4,
+    .analytics-card.span-3,
+    .analytics-card.span-8 { grid-column: span 6; }
+}
+@media (max-width: 900px) {
+    .analytics-grid { grid-template-columns: 1fr; gap: 12px; }
+    .analytics-card.span-6,
+    .analytics-card.span-4,
+    .analytics-card.span-3,
+    .analytics-card.span-8,
+    .analytics-card.span-12 { grid-column: span 1; }
+    .analytics-kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 500px) {
+    .analytics-kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .analytics-kpi { padding: 10px 12px; }
+    .analytics-kpi-val { font-size: 22px; }
+}
+
+.ac-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+}
+.ac-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.ac-subtitle {
+    font-size: 10px;
+    color: var(--t3);
+    font-family: var(--mono);
+}
+.ac-body {
+    padding: 16px;
+    min-height: 180px;
+    position: relative;
+}
+.ac-body.tall { min-height: 240px; }
+.ac-body.short { min-height: 140px; }
+
+/* Chart containers */
+.chart-container {
+    width: 100%;
+    height: 160px;
+    position: relative;
+}
+.chart-container.tall { height: 220px; }
+.chart-container canvas {
+    display: block;
+}
+
+/* Donut chart with legend */
+.donut-layout {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.donut-chart-wrap {
+    flex-shrink: 0;
+    width: 120px;
+    height: 120px;
+}
+.donut-legend {
+    flex: 1;
+    min-width: 0;
+}
+.donut-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    font-size: 12px;
+}
+.donut-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+.donut-legend-label {
+    flex: 1;
+    color: var(--t2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.donut-legend-val {
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--t0);
+}
+
+/* Horizontal bar chart */
+.hbar-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.hbar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.hbar-label {
+    width: 80px;
+    font-size: 11px;
+    color: var(--t2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+.hbar-track {
+    flex: 1;
+    height: 16px;
+    background: var(--bg2);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+.hbar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+.hbar-fill.warning { background: var(--warning); }
+.hbar-fill.critical { background: var(--critical); }
+.hbar-val {
+    width: 40px;
+    text-align: right;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--t1);
+    flex-shrink: 0;
+}
+
+/* Sensor comparison table */
+.sensor-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.sensor-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+}
+.sensor-table th.right { text-align: right; }
+.sensor-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--t1);
+}
+.sensor-table td.right { text-align: right; font-family: var(--mono); }
+.sensor-table tr:last-child td { border-bottom: none; }
+.sensor-table .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+.sensor-table .status-dot.online { background: var(--safe); box-shadow: 0 0 4px var(--safe); }
+.sensor-table .status-dot.offline { background: var(--critical); }
+.sensor-table .status-dot.degraded { background: var(--warning); }
+
+/* Empty state */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 140px;
+    color: var(--t3);
+    text-align: center;
+}
+.empty-state-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+.empty-state-text {
+    font-size: 12px;
+}
+
+/* Heatmap container */
+#activity-heatmap-container {
+    overflow-x: auto;
+}
+#activity-heatmap-container .activity-heatmap {
+    min-width: 500px;
+}
+
+/* Refresh button */
+.hdr-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--mono);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--t2);
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.hdr-btn:hover { background: var(--bg3); color: var(--t1); border-color: var(--border-hi); }
+
+/* Controller toggle */
+.controller-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    cursor: pointer;
+    user-select: none;
+}
+.controller-toggle-track {
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    position: relative;
+    transition: all 0.2s ease;
+}
+.controller-toggle-track.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+}
+.controller-toggle-knob {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--t3);
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    transition: all 0.2s ease;
+}
+.controller-toggle-track.active .controller-toggle-knob {
+    left: 15px;
+    background: var(--accent);
+}
+.controller-toggle-label {
+    font-size: 11px;
+    color: var(--t3);
+    font-family: var(--mono);
+    white-space: nowrap;
+}
+
+/* Sidebar badge */
+.sb-badge {
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--accent);
+    color: var(--bg0);
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item active">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+      <span class="sb-badge" id="sb-badge-fleet"></span>
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+      <span class="sb-badge" id="sb-badge-alerts"></span>
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div id="user-menu-container"></div>
+    <div class="sb-version" id="sb-version">v0.1.0</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+
+  <!-- Header Bar -->
+  <header id="hdr">
+    <div class="hdr-left">
+      <h1>Analytics</h1>
+      <span class="hdr-node" id="hdr-node"></span>
+    </div>
+    <div class="hdr-right">
+      <button class="hdr-btn" id="refresh-btn" title="Refresh Data">Refresh</button>
+      <span class="hdr-conn" id="hdr-conn">
+        <span class="hdr-dot green"></span> Connected
+      </span>
+      <span class="hdr-uptime" id="hdr-uptime"></span>
+      <span class="hdr-clock" id="hdr-clock"></span>
+    </div>
+  </header>
+
+  <!-- Time Range Selector -->
+  <div class="time-range-bar">
+    <span class="time-range-label">Period:</span>
+    <button class="time-btn" data-hours="24">24h</button>
+    <button class="time-btn active" data-hours="168">7 Days</button>
+    <button class="time-btn" data-hours="720">30 Days</button>
+    <div class="controller-toggle" id="controller-toggle" title="Include RC controllers in analytics">
+      <span class="controller-toggle-label">Show Controllers</span>
+      <div class="controller-toggle-track" id="controller-toggle-track">
+        <div class="controller-toggle-knob"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Summary Row -->
+  <div class="analytics-kpi-row">
+    <div class="analytics-kpi">
+      <div class="analytics-kpi-val accent" id="kpi-total-detections">--</div>
+      <div class="analytics-kpi-label">Total Detections</div>
+      <div class="analytics-kpi-change neutral" id="kpi-detections-change">--</div>
+    </div>
+    <div class="analytics-kpi">
+      <div class="analytics-kpi-val" id="kpi-unique-uavs">--</div>
+      <div class="analytics-kpi-label">Unique UAVs</div>
+      <div class="analytics-kpi-sub" id="kpi-unique-sub">-- new this period</div>
+    </div>
+    <div class="analytics-kpi">
+      <div class="analytics-kpi-val" id="kpi-avg-trust">--</div>
+      <div class="analytics-kpi-label">Avg Trust Score</div>
+    </div>
+    <div class="analytics-kpi">
+      <div class="analytics-kpi-val warning" id="kpi-returning-uavs">--</div>
+      <div class="analytics-kpi-label">Returning UAVs</div>
+      <div class="analytics-kpi-sub" id="kpi-returning-sub">-- repeat rate</div>
+    </div>
+    <div class="analytics-kpi">
+      <div class="analytics-kpi-val" id="kpi-alerts">--</div>
+      <div class="analytics-kpi-label">Alerts Generated</div>
+    </div>
+  </div>
+
+  <!-- Analytics Grid -->
+  <div class="analytics-grid">
+
+    <!-- Detection Volume Over Time -->
+    <div class="analytics-card span-8">
+      <div class="ac-header">
+        <div>
+          <div class="ac-title">Detection Volume</div>
+          <div class="ac-subtitle">Detections per day over selected period</div>
+        </div>
+      </div>
+      <div class="ac-body">
+        <div class="chart-container tall">
+          <canvas id="volume-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classification Distribution -->
+    <div class="analytics-card span-4">
+      <div class="ac-header">
+        <div class="ac-title">Classification</div>
+      </div>
+      <div class="ac-body">
+        <div class="donut-layout">
+          <div class="donut-chart-wrap">
+            <canvas id="class-donut"></canvas>
+          </div>
+          <div class="donut-legend" id="class-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Heatmap -->
+    <div class="analytics-card span-8">
+      <div class="ac-header">
+        <div>
+          <div class="ac-title">Activity Heatmap</div>
+          <div class="ac-subtitle">Detection density by hour and day</div>
+        </div>
+      </div>
+      <div class="ac-body">
+        <div id="activity-heatmap-container"></div>
+      </div>
+    </div>
+
+    <!-- Detection Sources -->
+    <div class="analytics-card span-4">
+      <div class="ac-header">
+        <div class="ac-title">Detection Sources</div>
+      </div>
+      <div class="ac-body">
+        <div class="hbar-list" id="source-bars"></div>
+      </div>
+    </div>
+
+    <!-- Top Manufacturers -->
+    <div class="analytics-card span-4">
+      <div class="ac-header">
+        <div class="ac-title">Top Manufacturers</div>
+      </div>
+      <div class="ac-body">
+        <div class="hbar-list" id="manufacturer-bars"></div>
+      </div>
+    </div>
+
+    <!-- Top Models -->
+    <div class="analytics-card span-4">
+      <div class="ac-header">
+        <div class="ac-title">Top Models</div>
+      </div>
+      <div class="ac-body">
+        <div class="hbar-list" id="model-bars"></div>
+      </div>
+    </div>
+
+    <!-- Sensor Performance -->
+    <div class="analytics-card span-4">
+      <div class="ac-header">
+        <div class="ac-title">Sensor Performance</div>
+      </div>
+      <div class="ac-body">
+        <table class="sensor-table" id="sensor-table">
+          <thead>
+            <tr>
+              <th>Tap</th>
+              <th class="right">Detections</th>
+              <th class="right">Avg RSSI</th>
+            </tr>
+          </thead>
+          <tbody id="sensor-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- Activity Heatmap Component -->
+<script src="/js/activity-heatmap.js"></script>
+
+<script>
+(function() {
+    'use strict';
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════════════════════
+    var state = {
+        timeRangeHours: 168, // 7 days default
+        showControllers: false,
+        drones: [],
+        detections: [],
+        taps: [],
+        alerts: [],
+        controllerIDs: {} // identifier -> true for controller drones
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INITIALIZATION
+    // ═══════════════════════════════════════════════════════════════════════════
+    function init() {
+        updateClock();
+        setInterval(updateClock, 1000);
+        loadStatus();
+        initTimeRangeButtons();
+        loadAllData();
+
+        var refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                loadAllData();
+            });
+        }
+    }
+
+    function updateClock() {
+        var now = new Date();
+        var el = document.getElementById('hdr-clock');
+        if (el) {
+            el.textContent = now.toLocaleTimeString('en-US', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+        }
+    }
+
+    function loadStatus() {
+        fetch('/api/status')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var nodeEl = document.getElementById('hdr-node');
+                if (nodeEl && data.node_name) nodeEl.textContent = data.node_name;
+
+                var verEl = document.getElementById('sb-version');
+                if (verEl && data.version) verEl.textContent = 'v' + data.version;
+
+                updateBadges(data);
+            })
+            .catch(function(err) { console.warn('Failed to load status:', err); });
+    }
+
+    function updateBadges(data) {
+        var fleetBadge = document.getElementById('sb-badge-fleet');
+        if (fleetBadge) {
+            var count = data.uav_count || 0;
+            fleetBadge.textContent = count > 0 ? count : '';
+            fleetBadge.style.display = count > 0 ? 'inline-block' : 'none';
+        }
+
+        var alertBadge = document.getElementById('sb-badge-alerts');
+        if (alertBadge) {
+            var alerts = data.pending_alerts || 0;
+            alertBadge.textContent = alerts > 0 ? alerts : '';
+            alertBadge.style.display = alerts > 0 ? 'inline-block' : 'none';
+        }
+    }
+
+    function initTimeRangeButtons() {
+        document.querySelectorAll('.time-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.time-btn').forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                state.timeRangeHours = parseInt(this.getAttribute('data-hours'));
+                loadAllData();
+            });
+        });
+
+        // Controller toggle
+        var toggle = document.getElementById('controller-toggle');
+        if (toggle) {
+            toggle.addEventListener('click', function() {
+                state.showControllers = !state.showControllers;
+                var track = document.getElementById('controller-toggle-track');
+                if (track) {
+                    if (state.showControllers) track.classList.add('active');
+                    else track.classList.remove('active');
+                }
+                renderAll();
+            });
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONTROLLER FILTERING
+    // ═══════════════════════════════════════════════════════════════════════════
+    function buildControllerIndex() {
+        state.controllerIDs = {};
+        state.drones.forEach(function(d) {
+            if (d.is_controller) {
+                state.controllerIDs[d.identifier] = true;
+            }
+        });
+    }
+
+    function getFilteredDrones() {
+        if (state.showControllers) return state.drones;
+        return state.drones.filter(function(d) {
+            return !d.is_controller;
+        });
+    }
+
+    function getFilteredDetections() {
+        if (state.showControllers) return state.detections;
+
+        // Build a designation-to-controller lookup from drones for fallback matching
+        var controllerDesignations = {};
+        state.drones.forEach(function(d) {
+            if (d.is_controller && d.designation) {
+                controllerDesignations[d.designation] = true;
+            }
+        });
+
+        return state.detections.filter(function(det) {
+            // Direct identifier match
+            if (state.controllerIDs[det.identifier]) return false;
+            // Fallback: check designation field on the detection itself
+            if (det.designation && controllerDesignations[det.designation]) return false;
+            return true;
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DATA LOADING
+    // ═══════════════════════════════════════════════════════════════════════════
+    function loadAllData() {
+        Promise.all([
+            fetch('/api/drones').then(function(r) { return r.json(); }),
+            fetch('/api/detections/history?hours=' + state.timeRangeHours).then(function(r) { return r.json(); }),
+            fetch('/api/taps').then(function(r) { return r.json(); }),
+            fetch('/api/alerts').then(function(r) { return r.json(); })
+        ]).then(function(results) {
+            state.drones = results[0].drones || results[0] || [];
+            state.detections = results[1].detections || results[1] || [];
+            state.taps = results[2].taps || results[2] || [];
+            state.alerts = results[3].alerts || results[3] || [];
+
+            buildControllerIndex();
+            renderAll();
+        }).catch(function(err) {
+            console.warn('Failed to load data:', err);
+            renderAll();
+        });
+    }
+
+    function renderAll() {
+        renderKPIs();
+        renderVolumeChart();
+        renderClassificationDonut();
+        renderSourceBars();
+        renderManufacturerBars();
+        renderModelBars();
+        renderSensorTable();
+        renderHeatmap();
+        if (typeof SkylensAuth !== 'undefined') SkylensAuth.revealPage();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // KPI CARDS
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderKPIs() {
+        var detections = getFilteredDetections();
+        var drones = getFilteredDrones();
+        var alerts = state.alerts;
+
+        // Total detections (UAV-only by default)
+        var totalEl = document.getElementById('kpi-total-detections');
+        if (totalEl) totalEl.textContent = formatNumber(detections.length);
+
+        // Detection change
+        var changeEl = document.getElementById('kpi-detections-change');
+        if (changeEl) {
+            var now = Date.now();
+            var halfPeriod = state.timeRangeHours * 60 * 60 * 1000 / 2;
+            var recentCount = detections.filter(function(d) {
+                return new Date(d.timestamp || d.time).getTime() > (now - halfPeriod);
+            }).length;
+            var olderCount = detections.filter(function(d) {
+                var ts = new Date(d.timestamp || d.time).getTime();
+                return ts <= (now - halfPeriod) && ts > (now - state.timeRangeHours * 60 * 60 * 1000);
+            }).length;
+            var change = olderCount > 0 ? ((recentCount - olderCount) / olderCount * 100) : 0;
+            var arrow = change > 0 ? '+' : '';
+            changeEl.textContent = arrow + change.toFixed(0) + '% vs prior period';
+            changeEl.className = 'analytics-kpi-change ' + (change > 0 ? 'up' : change < 0 ? 'down' : 'neutral');
+        }
+
+        // Unique UAVs (non-controller by default)
+        var uniqueEl = document.getElementById('kpi-unique-uavs');
+        if (uniqueEl) uniqueEl.textContent = drones.length;
+
+        var uniqueSubEl = document.getElementById('kpi-unique-sub');
+        if (uniqueSubEl) {
+            var cutoff = Date.now() - state.timeRangeHours * 60 * 60 * 1000;
+            var newCount = drones.filter(function(d) {
+                return new Date(d.first_seen || d.created_at).getTime() > cutoff;
+            }).length;
+            uniqueSubEl.textContent = newCount + ' new this period';
+        }
+
+        // Average trust score (non-controller drones)
+        var avgTrustEl = document.getElementById('kpi-avg-trust');
+        if (avgTrustEl) {
+            var sum = 0, count = 0;
+            drones.forEach(function(d) {
+                if (d.trust_score != null) { sum += d.trust_score; count++; }
+            });
+            var avg = count > 0 ? Math.round(sum / count) : '--';
+            avgTrustEl.textContent = avg;
+            avgTrustEl.className = 'analytics-kpi-val ' + (avg >= 70 ? 'safe' : avg >= 40 ? 'warning' : avg !== '--' ? 'critical' : '');
+        }
+
+        // Returning UAVs — drones seen on 2+ distinct calendar days
+        var returningEl = document.getElementById('kpi-returning-uavs');
+        var returningSubEl = document.getElementById('kpi-returning-sub');
+        if (returningEl) {
+            var returningCount = 0;
+            drones.forEach(function(d) {
+                var firstSeen = d.first_seen || d.created_at;
+                var lastSeen = d.last_seen || d.updated_at;
+                if (firstSeen && lastSeen) {
+                    var firstDay = new Date(firstSeen).toDateString();
+                    var lastDay = new Date(lastSeen).toDateString();
+                    if (firstDay !== lastDay) returningCount++;
+                }
+            });
+            returningEl.textContent = returningCount;
+            returningEl.className = 'analytics-kpi-val ' + (returningCount > 0 ? 'warning' : '');
+            if (returningSubEl) {
+                var pct = drones.length > 0 ? Math.round(returningCount / drones.length * 100) : 0;
+                returningSubEl.textContent = pct + '% repeat rate';
+            }
+        }
+
+        // Alerts
+        var alertsEl = document.getElementById('kpi-alerts');
+        if (alertsEl) {
+            var cutoff = Date.now() - state.timeRangeHours * 60 * 60 * 1000;
+            var alertCount = alerts.filter(function(a) {
+                return new Date(a.created_at || a.timestamp).getTime() > cutoff;
+            }).length;
+            alertsEl.textContent = alertCount;
+            alertsEl.className = 'analytics-kpi-val ' + (alertCount > 10 ? 'warning' : alertCount > 0 ? 'accent' : '');
+        }
+    }
+
+    function formatNumber(n) {
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return n.toString();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VOLUME CHART (Bar chart)
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderVolumeChart() {
+        var canvas = document.getElementById('volume-chart');
+        if (!canvas) return;
+
+        var ctx = canvas.getContext('2d');
+        var rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        var width = canvas.width;
+        var height = canvas.height;
+        var padding = { top: 20, right: 20, bottom: 30, left: 50 };
+
+        ctx.clearRect(0, 0, width, height);
+
+        var filteredDetections = getFilteredDetections();
+
+        // Aggregate by day
+        var days = Math.min(Math.ceil(state.timeRangeHours / 24), 30);
+        var dailyData = [];
+        var dayLabels = [];
+
+        for (var i = days - 1; i >= 0; i--) {
+            var start = new Date();
+            start.setDate(start.getDate() - i);
+            start.setHours(0, 0, 0, 0);
+            var end = new Date(start);
+            end.setDate(end.getDate() + 1);
+
+            var count = filteredDetections.filter(function(d) {
+                var ts = new Date(d.timestamp || d.time);
+                return ts >= start && ts < end;
+            }).length;
+
+            dailyData.push(count);
+            dayLabels.push(start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        }
+
+        var max = Math.max.apply(null, dailyData) || 1;
+
+        // Draw grid lines
+        ctx.strokeStyle = '#2A3832';
+        ctx.lineWidth = 1;
+        for (var j = 0; j <= 4; j++) {
+            var y = padding.top + (height - padding.top - padding.bottom) * (1 - j / 4);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+            ctx.stroke();
+
+            // Y-axis labels
+            ctx.fillStyle = '#6B9B74';
+            ctx.font = '10px IBM Plex Mono';
+            ctx.textAlign = 'right';
+            ctx.fillText(Math.round(max * j / 4), padding.left - 8, y + 3);
+        }
+
+        // Draw bars
+        var barWidth = (width - padding.left - padding.right) / dailyData.length;
+        var barGap = Math.min(4, barWidth * 0.2);
+
+        dailyData.forEach(function(val, idx) {
+            var barH = max > 0 ? (val / max) * (height - padding.top - padding.bottom) : 0;
+            var x = padding.left + idx * barWidth + barGap / 2;
+            var y = height - padding.bottom - barH;
+
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(x, y, barWidth - barGap, barH);
+
+            // X-axis labels (show every few depending on count)
+            if (days <= 7 || idx % Math.ceil(days / 7) === 0) {
+                ctx.fillStyle = '#6B9B74';
+                ctx.font = '10px IBM Plex Mono';
+                ctx.textAlign = 'center';
+                ctx.fillText(dayLabels[idx], x + (barWidth - barGap) / 2, height - 10);
+            }
+        });
+
+        if (dailyData.every(function(v) { return v === 0; })) {
+            ctx.fillStyle = '#6B9B74';
+            ctx.font = '12px IBM Plex Mono';
+            ctx.textAlign = 'center';
+            ctx.fillText('No detection data for this period', width / 2, height / 2);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CLASSIFICATION DONUT
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderClassificationDonut() {
+        var canvas = document.getElementById('class-donut');
+        var legendEl = document.getElementById('class-legend');
+        if (!canvas || !legendEl) return;
+
+        var ctx = canvas.getContext('2d');
+        canvas.width = 120;
+        canvas.height = 120;
+
+        var cx = 60, cy = 60, r = 50, innerR = 30;
+
+        // Count classifications
+        var filteredDrones = getFilteredDrones();
+        var counts = { FRIENDLY: 0, NEUTRAL: 0, UNKNOWN: 0, HOSTILE: 0 };
+        filteredDrones.forEach(function(d) {
+            var trust = d.trust_score != null ? d.trust_score : 100;
+            var flags = d.spoof_flags || [];
+            if (trust < 30 || flags.length > 1) counts.HOSTILE++;
+            else if (trust < 50 || flags.length > 0) counts.UNKNOWN++;
+            else if (trust >= 90 && d.id_serial) counts.FRIENDLY++;
+            else counts.NEUTRAL++;
+        });
+
+        var data = [
+            { label: 'Friendly', value: counts.FRIENDLY, color: '#00E676' },
+            { label: 'Neutral', value: counts.NEUTRAL, color: '#2196F3' },
+            { label: 'Unknown', value: counts.UNKNOWN, color: '#78909C' },
+            { label: 'Hostile', value: counts.HOSTILE, color: '#FF1744' }
+        ];
+
+        var total = data.reduce(function(a, b) { return a + b.value; }, 0);
+
+        ctx.clearRect(0, 0, 120, 120);
+
+        if (total === 0) {
+            ctx.fillStyle = '#6B9B74';
+            ctx.font = '11px IBM Plex Mono';
+            ctx.textAlign = 'center';
+            ctx.fillText('No data', cx, cy);
+            legendEl.innerHTML = '<div class="empty-state-text">No UAVs detected</div>';
+            return;
+        }
+
+        // Draw donut
+        var startAngle = -Math.PI / 2;
+        data.forEach(function(seg) {
+            if (seg.value === 0) return;
+            var angle = (seg.value / total) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(cx + innerR * Math.cos(startAngle), cy + innerR * Math.sin(startAngle));
+            ctx.arc(cx, cy, r, startAngle, startAngle + angle);
+            ctx.arc(cx, cy, innerR, startAngle + angle, startAngle, true);
+            ctx.closePath();
+            ctx.fillStyle = seg.color;
+            ctx.fill();
+            startAngle += angle;
+        });
+
+        // Center text
+        ctx.fillStyle = '#E8F5E9';
+        ctx.font = 'bold 16px IBM Plex Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText(total, cx, cy + 5);
+
+        // Legend
+        var legendHtml = '';
+        data.forEach(function(seg) {
+            var pct = total > 0 ? Math.round(seg.value / total * 100) : 0;
+            legendHtml += '<div class="donut-legend-item">' +
+                '<span class="donut-legend-dot" style="background:' + seg.color + '"></span>' +
+                '<span class="donut-legend-label">' + seg.label + '</span>' +
+                '<span class="donut-legend-val">' + seg.value + ' (' + pct + '%)</span>' +
+            '</div>';
+        });
+        legendEl.innerHTML = legendHtml;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DETECTION SOURCES
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderSourceBars() {
+        var container = document.getElementById('source-bars');
+        if (!container) return;
+
+        var counts = {};
+        getFilteredDrones().forEach(function(d) {
+            var src = d.detection_source || 'Unknown';
+            // Normalize source names
+            if (src.indexOf('WiFi') >= 0 || src.indexOf('WIFI') >= 0) src = 'Wi-Fi Beacon';
+            else if (src.indexOf('RemoteID') >= 0 || src.indexOf('REMOTEID') >= 0 || src.indexOf('RID') >= 0) src = 'RemoteID';
+            else if (src.indexOf('Bluetooth') >= 0 || src.indexOf('BT') >= 0) src = 'Bluetooth';
+            else if (src.indexOf('ADS-B') >= 0) src = 'ADS-B';
+            else if (src === 'Unknown' || src === 'UNKNOWN' || src === '') src = 'Unknown';
+            counts[src] = (counts[src] || 0) + 1;
+        });
+
+        var sorted = Object.keys(counts).map(function(k) {
+            return { label: k, value: counts[k] };
+        }).sort(function(a, b) { return b.value - a.value; }).slice(0, 5);
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-text">No source data</div></div>';
+            return;
+        }
+
+        var max = sorted[0].value || 1;
+        var html = '';
+        sorted.forEach(function(item) {
+            var pct = (item.value / max) * 100;
+            html += '<div class="hbar-item">' +
+                '<span class="hbar-label" title="' + item.label + '">' + truncate(item.label, 12) + '</span>' +
+                '<div class="hbar-track"><div class="hbar-fill" style="width:' + pct + '%"></div></div>' +
+                '<span class="hbar-val">' + item.value + '</span>' +
+            '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MANUFACTURER BARS
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderManufacturerBars() {
+        var container = document.getElementById('manufacturer-bars');
+        if (!container) return;
+
+        var counts = {};
+        getFilteredDrones().forEach(function(d) {
+            var mfr = d.manufacturer || d.id_mfr || 'Unknown';
+            if (mfr !== 'UNKNOWN' && mfr !== '') {
+                counts[mfr] = (counts[mfr] || 0) + 1;
+            }
+        });
+
+        var sorted = Object.keys(counts).map(function(k) {
+            return { label: k, value: counts[k] };
+        }).sort(function(a, b) { return b.value - a.value; }).slice(0, 5);
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-text">No manufacturer data</div></div>';
+            return;
+        }
+
+        var max = sorted[0].value || 1;
+        var html = '';
+        sorted.forEach(function(item) {
+            var pct = (item.value / max) * 100;
+            html += '<div class="hbar-item">' +
+                '<span class="hbar-label" title="' + item.label + '">' + truncate(item.label, 10) + '</span>' +
+                '<div class="hbar-track"><div class="hbar-fill" style="width:' + pct + '%"></div></div>' +
+                '<span class="hbar-val">' + item.value + '</span>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MODEL BARS
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderModelBars() {
+        var container = document.getElementById('model-bars');
+        if (!container) return;
+
+        var counts = {};
+        getFilteredDrones().forEach(function(d) {
+            var model = d.designation || d.model || d.uav_type || 'Unknown';
+            if (model !== 'UNKNOWN' && model !== '') {
+                counts[model] = (counts[model] || 0) + 1;
+            }
+        });
+
+        var sorted = Object.keys(counts).map(function(k) {
+            return { label: k, value: counts[k] };
+        }).sort(function(a, b) { return b.value - a.value; }).slice(0, 5);
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-text">No model data</div></div>';
+            return;
+        }
+
+        var max = sorted[0].value || 1;
+        var html = '';
+        sorted.forEach(function(item) {
+            var pct = (item.value / max) * 100;
+            html += '<div class="hbar-item">' +
+                '<span class="hbar-label" title="' + item.label + '">' + truncate(item.label, 10) + '</span>' +
+                '<div class="hbar-track"><div class="hbar-fill" style="width:' + pct + '%"></div></div>' +
+                '<span class="hbar-val">' + item.value + '</span>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+    }
+
+    function truncate(str, len) {
+        return str.length > len ? str.substring(0, len - 1) + '...' : str;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SENSOR TABLE
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderSensorTable() {
+        var tbody = document.getElementById('sensor-tbody');
+        if (!tbody) return;
+
+        if (state.taps.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--t3)">No sensor data</td></tr>';
+            return;
+        }
+
+        // Count detections per tap and compute avg RSSI
+        var filteredDetections = getFilteredDetections();
+        var tapStats = {};
+        filteredDetections.forEach(function(d) {
+            var tapId = d.tap_id || d.source_tap;
+            if (tapId) {
+                if (!tapStats[tapId]) tapStats[tapId] = { count: 0, rssiSum: 0, rssiCount: 0 };
+                tapStats[tapId].count++;
+                if (d.rssi != null) {
+                    tapStats[tapId].rssiSum += d.rssi;
+                    tapStats[tapId].rssiCount++;
+                }
+            }
+        });
+
+        // Sort taps by detection count
+        var sortedTaps = state.taps.slice().sort(function(a, b) {
+            var aCount = tapStats[a.id] ? tapStats[a.id].count : 0;
+            var bCount = tapStats[b.id] ? tapStats[b.id].count : 0;
+            return bCount - aCount;
+        });
+
+        var html = '';
+        sortedTaps.slice(0, 6).forEach(function(tap) {
+            var stats = tapStats[tap.id] || { count: 0, rssiSum: 0, rssiCount: 0 };
+            var avgRssi = stats.rssiCount > 0 ? Math.round(stats.rssiSum / stats.rssiCount) : '--';
+            var status = tap.status || (tap.online ? 'online' : 'offline');
+
+            html += '<tr>' +
+                '<td><span class="status-dot ' + status + '"></span>' + (tap.name || tap.id) + '</td>' +
+                '<td class="right">' + stats.count + '</td>' +
+                '<td class="right">' + (avgRssi !== '--' ? avgRssi + ' dBm' : '--') + '</td>' +
+            '</tr>';
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ACTIVITY HEATMAP
+    // ═══════════════════════════════════════════════════════════════════════════
+    function renderHeatmap() {
+        if (typeof ActivityHeatmap !== 'undefined') {
+            ActivityHeatmap.mount('activity-heatmap-container', {});
+            ActivityHeatmap.loadDetections(getFilteredDetections());
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WINDOW RESIZE HANDLING
+    // ═══════════════════════════════════════════════════════════════════════════
+    var resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            renderVolumeChart();
+        }, 150);
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // START
+    // ═══════════════════════════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof SkylensAuth !== 'undefined' && SkylensAuth.whenReady) {
+            SkylensAuth.whenReady().then(function () { init(); });
+        } else {
+            init();
+        }
+    });
+})();
+</script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

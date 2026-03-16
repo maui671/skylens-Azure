@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4CAF50">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/img/icon-192.png">
+<link rel="icon" type="image/png" href="/img/icon-192.png">
+<script>
+(function(){var t=localStorage.getItem("skylens_theme");if(t){try{if(t.charAt(0)==='"')t=JSON.parse(t)}catch(e){}if(t)document.documentElement.setAttribute("data-theme",t)}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>Skylens — System</title>
+<link rel="stylesheet" href="/css/dashboard.css">
+<style>
+/* ─── NODE BANNER ─── */
+#node-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: 16px;
+}
+.nb-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.nb-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 8px var(--safe);
+    animation: nb-pulse 2s ease-in-out infinite;
+}
+@keyframes nb-pulse {
+    0%, 100% { box-shadow: 0 0 8px var(--safe); }
+    50% { box-shadow: 0 0 14px var(--safe); }
+}
+.nb-dot.offline {
+    background: var(--critical);
+    box-shadow: 0 0 8px var(--critical);
+    animation: nb-pulse-err 2s ease-in-out infinite;
+}
+@keyframes nb-pulse-err {
+    0%, 100% { box-shadow: 0 0 8px var(--critical); }
+    50% { box-shadow: 0 0 14px var(--critical); }
+}
+.nb-status-text {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--safe);
+}
+.nb-status-text.offline { color: var(--critical); }
+.nb-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--t0);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.nb-meta {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--t2);
+    font-family: var(--mono);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.nb-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.nb-meta-label {
+    color: var(--t3);
+    text-transform: uppercase;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+/* ─── KPI ROW (6 cards) ─── */
+#sys-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.sys-kpi {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 16px 14px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+}
+.sys-kpi:hover { border-color: var(--border-hi); }
+.sys-kpi-val {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: -0.5px;
+    line-height: 1;
+    transition: color .3s;
+}
+.sys-kpi-label {
+    font-size: 10px;
+    color: var(--t2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+}
+.sys-kpi-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+
+/* ─── SPLIT ROW (Chart + Sensors) ─── */
+#sys-split-row {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.sys-split-left { min-width: 0; }
+.sys-split-right { min-width: 0; }
+
+/* ─── CHART ─── */
+.sys-chart-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 12px;
+    position: relative;
+}
+#activity-canvas {
+    width: 100%;
+    height: 160px;
+    display: block;
+}
+.sys-chart-label {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    font-size: 10px;
+    color: var(--t3);
+    font-family: var(--mono);
+}
+
+/* ─── SENSOR CARDS ─── */
+#sensor-grid {
+    display: grid;
+    gap: 8px;
+    max-height: 230px;
+    overflow-y: auto;
+}
+.sys-sensor-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 10px 12px;
+    transition: border-color .2s;
+}
+.sys-sensor-card:hover { border-color: var(--border-hi); }
+.sys-sensor-hdr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.sys-sensor-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t0);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sys-sensor-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+.sys-sensor-badge.live { background: var(--safe-dim); color: var(--safe); }
+.sys-sensor-badge.stale { background: var(--warning-dim); color: var(--warning); }
+.sys-sensor-badge.offline { background: var(--critical-dim); color: var(--critical); }
+.sys-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+.sys-bar-label {
+    font-size: 9px;
+    color: var(--t3);
+    width: 28px;
+    text-transform: uppercase;
+    font-family: var(--mono);
+}
+.sys-bar-track {
+    flex: 1;
+    height: 4px;
+    background: var(--bg1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.sys-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width .4s;
+}
+.sys-bar-val {
+    font-size: 9px;
+    color: var(--t2);
+    font-family: var(--mono);
+    width: 32px;
+    text-align: right;
+}
+.sys-sensor-stats {
+    display: flex;
+    gap: 10px;
+    font-size: 10px;
+    color: var(--t3);
+    font-family: var(--mono);
+    margin-top: 6px;
+}
+.sys-sensor-empty {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--t3);
+    font-size: 12px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+}
+
+/* ─── PIPELINE FLOW ─── */
+#pipeline-flow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.pf-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.pf-col-header {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding-left: 2px;
+    margin-bottom: 2px;
+}
+.pf-stage {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 12px;
+    transition: border-color .2s;
+}
+.pf-stage:hover { border-color: var(--border-hi); }
+.pf-stage-hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.pf-stage-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t0);
+}
+.pf-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+.pf-badge.ok { background: var(--safe-dim); color: var(--safe); }
+.pf-badge.warn { background: var(--warning-dim); color: var(--warning); }
+.pf-badge.err { background: var(--critical-dim); color: var(--critical); }
+.pf-hero {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--t0);
+    font-family: var(--mono);
+    letter-spacing: -1px;
+    line-height: 1;
+}
+.pf-hero-label {
+    font-size: 9px;
+    color: var(--t3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+    margin-bottom: 8px;
+}
+.pf-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 8px;
+}
+.pf-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.pf-stat-label {
+    font-size: 9px;
+    color: var(--t3);
+    text-transform: uppercase;
+}
+.pf-stat-val {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--t1);
+    font-family: var(--mono);
+}
+.pf-stat-val.error { color: var(--critical); }
+.pf-stat-val.warn { color: var(--warning); }
+
+/* ─── DATABASE HEALTH ─── */
+#db-health {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+}
+.db-top-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+.db-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.db-dot.ok { background: var(--safe); box-shadow: 0 0 6px var(--safe); }
+.db-dot.err { background: var(--critical); box-shadow: 0 0 6px var(--critical); }
+.db-label {
+    font-weight: 600;
+    color: var(--t0);
+    font-size: 12px;
+}
+.db-size {
+    color: var(--accent);
+    font-weight: 600;
+}
+.db-stat { color: var(--t2); }
+.db-stat-val {
+    color: var(--t0);
+    font-weight: 600;
+}
+.db-stat.error .db-stat-val { color: var(--critical); }
+.db-sep { color: var(--border); }
+.db-disk-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+.db-disk-label {
+    font-size: 10px;
+    color: var(--t3);
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.db-disk-bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bg1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.db-disk-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width .4s, background .4s;
+}
+.db-disk-text {
+    font-size: 11px;
+    color: var(--t2);
+    flex-shrink: 0;
+}
+.db-disk-text .db-disk-pct {
+    font-weight: 600;
+    color: var(--t0);
+}
+
+/* ─── EVENT LOG ─── */
+#event-filter-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+.evt-tab {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 4px 12px;
+    border-radius: var(--r);
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--t2);
+    cursor: pointer;
+    font-family: var(--font);
+    transition: all .15s;
+}
+.evt-tab:hover { border-color: var(--border-hi); color: var(--t0); }
+.evt-tab.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.event-log-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    height: 300px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+}
+.event-log-row {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.5;
+    transition: background .1s;
+}
+.event-log-row:hover { background: var(--accent-dim); }
+.event-log-row:last-child { border-bottom: none; }
+.event-log-ts {
+    color: var(--t3);
+    flex-shrink: 0;
+    min-width: 70px;
+}
+.evt-severity {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 1px 5px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    min-width: 36px;
+    text-align: center;
+}
+.evt-severity.error { background: var(--critical-dim); color: var(--critical); }
+.evt-severity.warn { background: var(--warning-dim); color: var(--warning); }
+.evt-severity.info { background: var(--safe-dim); color: var(--safe); }
+.event-log-msg { color: var(--t1); }
+.event-log-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--t3);
+    font-size: 13px;
+    font-family: var(--font);
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1200px) {
+    #sys-kpi-row { grid-template-columns: repeat(3, 1fr); }
+    #sys-split-row { grid-template-columns: 1fr; }
+    #pipeline-flow { grid-template-columns: repeat(2, 1fr); }
+    .nb-meta { display: none; }
+}
+@media (max-width: 900px) {
+    #sys-kpi-row { grid-template-columns: repeat(2, 1fr); }
+    #pipeline-flow { grid-template-columns: 1fr; }
+    :root { --sidebar-w: 160px; }
+}
+</style>
+<style id="auth-hide-style">body { visibility: hidden !important; }</style>
+<script src="/js/auth.js?v=20260228c"></script>
+<script>SkylensAuth.requireAuth().then(function(ok){if(ok){SkylensAuth.renderUserMenu('user-menu-container');if(SkylensAuth.isAdmin()){var a=document.getElementById('sb-admin');if(a)a.style.display='';}}});</script>
+<link rel="stylesheet" href="/css/mobile.css">
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">S</div>
+    <div class="sb-title">SKYLENS</div>
+  </div>
+
+  <div class="sb-nav">
+    <a href="/" class="sb-item">
+      <span class="sb-icon">&#9632;</span>
+      Dashboard
+    </a>
+    <a href="/airspace" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      Airspace
+    </a>
+    <a href="/analytics" class="sb-item">
+      <span class="sb-icon">&#128200;</span>
+      Analytics
+    </a>
+
+    <div class="sb-label">INTEL</div>
+    <a href="/fleet" class="sb-item">
+      <span class="sb-icon">&#9650;</span>
+      UAV Fleet
+      <span class="sb-badge" id="sb-badge-fleet"></span>
+    </a>
+    <a href="/taps" class="sb-item">
+      <span class="sb-icon">&#9673;</span>
+      Taps
+    </a>
+
+    <div class="sb-label">SYSTEM</div>
+    <a href="/alerts" class="sb-item">
+      <span class="sb-icon">&#9888;</span>
+      Alerts
+      <span class="sb-badge" id="sb-badge-alerts"></span>
+    </a>
+    <a href="/settings" class="sb-item">
+      <span class="sb-icon">&#9881;</span>
+      Settings
+    </a>
+    <a href="/tak" class="sb-item">
+      <span class="sb-icon">&#9678;</span>
+      TAK
+    </a>
+    <a href="/system" class="sb-item active">
+      <span class="sb-icon">&#9878;</span>
+      System
+    </a>
+    <a href="/admin" class="sb-item" id="sb-admin" style="display:none">
+      <span class="sb-icon">&#128101;</span>
+      Users
+    </a>
+    <a href="/profile" class="sb-item">
+      <span class="sb-icon">&#128100;</span>
+      Profile
+    </a>
+  </div>
+
+  <div class="sb-footer">
+    <div id="user-menu-container"></div>
+    <div class="sb-version">v0.1.0</div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main id="main">
+
+  <!-- Header Bar -->
+  <header id="hdr">
+    <div class="hdr-left">
+      <h1>System Overview</h1>
+      <span class="hdr-node" id="hdr-node"></span>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-conn" id="hdr-conn">
+        <span class="hdr-dot green"></span> Connected
+      </span>
+      <span class="hdr-uptime" id="hdr-uptime"></span>
+      <span class="hdr-clock" id="hdr-clock"></span>
+    </div>
+  </header>
+
+  <!-- 1. Node Identity Banner -->
+  <div id="node-banner">
+    <div class="nb-status">
+      <span class="nb-dot"></span>
+      <span class="nb-status-text">ONLINE</span>
+    </div>
+    <div class="nb-name" id="nb-name">Loading...</div>
+    <div class="nb-meta" id="nb-meta"></div>
+  </div>
+
+  <!-- 2. Health KPI Row -->
+  <div id="sys-kpi-row">
+    <div class="sys-kpi" id="kpi-msg-rate">
+      <div class="sys-kpi-val">--</div>
+      <div class="sys-kpi-label">Frame Rate</div>
+      <div class="sys-kpi-bar"></div>
+    </div>
+    <div class="sys-kpi" id="kpi-active-drones">
+      <div class="sys-kpi-val">--</div>
+      <div class="sys-kpi-label">Active Drones</div>
+      <div class="sys-kpi-bar"></div>
+    </div>
+    <div class="sys-kpi" id="kpi-active-sensors">
+      <div class="sys-kpi-val">--</div>
+      <div class="sys-kpi-label">Active Sensors</div>
+      <div class="sys-kpi-bar"></div>
+    </div>
+    <div class="sys-kpi" id="kpi-total-frames">
+      <div class="sys-kpi-val">--</div>
+      <div class="sys-kpi-label">Total Frames</div>
+      <div class="sys-kpi-bar"></div>
+    </div>
+    <div class="sys-kpi" id="kpi-low-trust">
+      <div class="sys-kpi-val">--</div>
+      <div class="sys-kpi-label">Low Trust</div>
+      <div class="sys-kpi-bar"></div>
+    </div>
+    <div class="sys-kpi" id="kpi-total-taps">
+      <div class="sys-kpi-val">--</div>
+      <div class="sys-kpi-label">Total Taps</div>
+      <div class="sys-kpi-bar"></div>
+    </div>
+  </div>
+
+  <!-- 3. Split Row: Chart + Sensors -->
+  <div id="sys-split-row">
+    <section class="section sys-split-left">
+      <div class="sec-head">
+        <h2>Frame Rate</h2>
+        <span class="link-btn" id="chart-rate">0 frames/s</span>
+      </div>
+      <div class="sys-chart-wrap">
+        <canvas id="activity-canvas"></canvas>
+        <span class="sys-chart-label">last 60s</span>
+      </div>
+    </section>
+    <section class="section sys-split-right">
+      <div class="sec-head">
+        <h2>Sensors</h2>
+        <span class="badge" id="sensor-count">0</span>
+      </div>
+      <div id="sensor-grid">
+        <div class="sys-sensor-empty">No sensors connected</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 4. Pipeline Flow -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>Pipeline Flow</h2>
+    </div>
+    <div id="pipeline-flow"></div>
+  </section>
+
+  <!-- 5. Database Health Bar -->
+  <div id="db-health"></div>
+
+  <!-- 6. Event Log -->
+  <section class="section">
+    <div class="sec-head">
+      <h2>Event Log</h2>
+      <span class="badge" id="event-count">0</span>
+    </div>
+    <div id="event-filter-tabs">
+      <button class="evt-tab active" data-filter="all">ALL</button>
+      <button class="evt-tab" data-filter="info">INFO</button>
+      <button class="evt-tab" data-filter="warn">WARN</button>
+      <button class="evt-tab" data-filter="error">ERROR</button>
+    </div>
+    <div class="event-log-wrap" id="event-log">
+      <div class="event-log-empty" id="event-empty">Waiting for events...</div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/js/system-page.js"></script>
+<script src="/js/mobile.js"></script>
+</body>
+</html>

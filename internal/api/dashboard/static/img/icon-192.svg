@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#0a0e14" rx="24"/>
+  <circle cx="96" cy="96" r="60" fill="none" stroke="#00d4ff" stroke-width="4"/>
+  <circle cx="96" cy="96" r="40" fill="none" stroke="#00d4ff" stroke-width="2" stroke-dasharray="8,4"/>
+  <circle cx="96" cy="96" r="20" fill="none" stroke="#00d4ff" stroke-width="2"/>
+  <circle cx="96" cy="96" r="6" fill="#00d4ff"/>
+  <path d="M96 36 L96 46 M96 146 L96 156 M36 96 L46 96 M146 96 L156 96" stroke="#00d4ff" stroke-width="2"/>
+  <text x="96" y="180" font-family="sans-serif" font-size="16" font-weight="bold" fill="#00d4ff" text-anchor="middle">SKYLENS</text>
+</svg>
