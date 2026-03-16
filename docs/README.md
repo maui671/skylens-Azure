@@ -266,7 +266,6 @@ Install and run NATS. A basic configuration is included:
 
 ```bash
 # Install NATS (see https://nats.io/download/)
-nats-server -c nats-server.conf
 ```
 
 #### Systemd Service (Production)
@@ -275,7 +274,6 @@ A systemd unit file is included for running Skylens Node as a service:
 
 ```bash
 # Copy and edit the service file
-sudo cp skylens-node.service /etc/systemd/system/
 # Edit paths and user as needed for your environment
 
 sudo systemctl daemon-reload
@@ -543,19 +541,16 @@ A Docker Compose stack is included for quick deployment:
 
 ```bash
 # Copy and edit the compose file
-cp docker/docker-compose.yml docker-compose.yml
 
 # Set environment variables
 export POSTGRES_PASSWORD=your-db-password
 export JWT_SECRET=your-jwt-secret
 
 # Start the full stack
-docker compose up -d
 ```
 
 The compose stack includes PostgreSQL 16, Redis 7, NATS 2.10, and the Skylens Node with health checks and dependency ordering.
 
-See [`docker/docker-compose.yml`](docker/docker-compose.yml) and [`Dockerfile`](Dockerfile) for details.
 
 ---
 
@@ -641,7 +636,6 @@ skylens/
 │   └── docs/                   # TAP installation, Realtek fix, operations brief
 ├── configs/
 │   └── config.example.yaml     # Node configuration template
-├── docker/
 │   └── docker-compose.yml      # Full stack: PostgreSQL + Redis + NATS + Node
 ├── scripts/
 │   ├── live-monitor.sh         # Live monitoring dashboard
@@ -649,10 +643,7 @@ skylens/
 ├── test/                       # Integration tests, test plans, E2E auth tests
 ├── docs/
 │   └── TEST_DAY_CHECKLIST.md   # Field test preparation checklist
-├── Dockerfile                  # Multi-stage Go build
 ├── Makefile                    # Build, test, deploy, service management
-├── nats-server.conf            # NATS server configuration
-└── skylens-node.service        # Systemd unit file
 ```
 
 ## License

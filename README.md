@@ -316,8 +316,6 @@ Based on the current repo state, the main documented path should no longer cente
 
 - Docker deployment
 - Tailscale-managed dashboard access
-- the older `scripts/install-node.sh` workflow
-- manual service-file copy steps using the static `skylens-node.service`
 
 Those can still exist as legacy/dev assets, but they are not the install path this repo is actively using for Azure.
 
@@ -331,15 +329,9 @@ These are the easiest wins because `scripts/install.sh` does not rely on them:
 
 - `scripts/install.sh.bak.1773182080`
   - backup artifact, should not live in the main branch
-- `scripts/install-node.sh`
   - older installer superseded by `scripts/install.sh`
-- `Dockerfile`
   - removable if you are no longer supporting container builds
-- `docker/`
   - removable if you are no longer supporting Docker deployment
-- `nats-server.conf`
-  - current installer generates `/etc/nats-server.conf` on the host
-- `skylens-node.service`
   - current installer generates the systemd unit dynamically
 
 ### Removable if you are intentionally trimming non-runtime tooling
@@ -376,8 +368,6 @@ These are core to how the current version works:
 
 If you remove the legacy files above, also update:
 
-- `Makefile` targets that still reference `flight-sim`, `intel-updater`, or `skylens-node.service`
-- any docs that still reference Docker, Tailscale, or `install-node.sh`
 - `README.md` links to files you decide to delete
 
 ---

@@ -23,7 +23,6 @@ systemctl disable --now nats-server 2>/dev/null || true
 systemctl disable --now postgresql-16 2>/dev/null || true
 
 log "Removing service files"
-rm -f /etc/systemd/system/skylens-node.service
 rm -f /etc/systemd/system/nats-server.service
 rm -f /etc/systemd/system/postgresql-16.service.d/override.conf
 rm -f /etc/systemd/system/redis.service.d/limit.conf
@@ -34,7 +33,6 @@ rm -rf "${DEPLOY_ROOT}"
 rm -rf "${CONFIG_DIR}"
 rm -rf "${DATA_DIR}"
 rm -f /usr/local/bin/skylens-node
-rm -f /etc/nats-server.conf
 rm -f /etc/nginx/conf.d/skylens.conf
 
 log "Removing PostgreSQL data"

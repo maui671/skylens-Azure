@@ -94,7 +94,6 @@ intel-dry-run: build-intel
 install-service: build
 	@echo "Installing systemd service..."
 	sudo cp $(BUILD_DIR)/$(BINARY_NAME) /usr/local/bin/
-	sudo cp skylens-node.service /etc/systemd/system/
 	sudo systemctl daemon-reload
 	sudo systemctl enable skylens-node
 	@echo "Service installed. Start with: sudo systemctl start skylens-node"
@@ -103,7 +102,6 @@ uninstall-service:
 	@echo "Uninstalling systemd service..."
 	sudo systemctl stop skylens-node || true
 	sudo systemctl disable skylens-node || true
-	sudo rm -f /etc/systemd/system/skylens-node.service
 	sudo rm -f /usr/local/bin/$(BINARY_NAME)
 	sudo systemctl daemon-reload
 	@echo "Service uninstalled."

@@ -659,7 +659,6 @@ The processing node runs on Rocky Linux 9 with the following stack:
 
 System tuning includes: network-latency tuned profile, somaxconn=8192, TCP buffers at 16MB, swappiness=1, and 65536 file descriptor limits.
 
-An automated install script (`scripts/install-node.sh`) takes a fresh Rocky Linux 9 box from zero to a fully running system in under 10 minutes, handling all dependency installation, database creation, system tuning, firewall configuration, and service setup.
 
 ### 15.2 TAP Deployment
 

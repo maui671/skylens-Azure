@@ -281,7 +281,6 @@ log "Configuring NATS"
 NATS_BIN="$(command -v nats-server || true)"
 [[ -n "${NATS_BIN}" ]] || fatal "nats-server binary not found after install"
 
-cat >/etc/nats-server.conf <<'NATSEOF'
 port: 4222
 http_port: 8222
 server_name: skylens
@@ -295,7 +294,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=${NATS_BIN} -c /etc/nats-server.conf
 Restart=on-failure
 RestartSec=3
 LimitNOFILE=65535
@@ -319,7 +317,6 @@ run chmod 600 "${CERT_DIR}/skylens.key"
 run chmod 644 "${CERT_DIR}/skylens.crt"
 
 log "Creating skylens-node systemd service"
-cat >/etc/systemd/system/skylens-node.service <<SVCEOF
 [Unit]
 Description=Skylens Node
 After=network-online.target postgresql-16.service redis.service nats-server.service
