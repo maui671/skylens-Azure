@@ -806,6 +806,13 @@ fn build_detection(
         raw_frame: Vec::new(),
         remoteid_payload: raw_payload.to_vec(),
         ht_capabilities: 0,
+        // RF/SDR fields — not applicable for BLE detections
+        rf_center_freq_mhz: 0.0,
+        rf_bandwidth_mhz: 0.0,
+        rf_modulation: String::new(),
+        rf_power_dbm: 0,
+        rf_protocol: String::new(),
+        rf_synthetic_id: String::new(),
     }
 }
 

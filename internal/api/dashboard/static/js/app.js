@@ -414,7 +414,7 @@ var App = {
         // Try ticket-based auth first (preferred: avoids JWT in URL/logs).
         // Falls back to plain connection (server checks cookie).
         var connectWs = function (query) {
-            var wsUrl = protocol + '//' + window.location.host + '/ws' + (query || '');
+            var wsUrl = protocol + '//' + host + ':8081/ws' + (query || '');
             try {
                 self._ws = new WebSocket(wsUrl);
             } catch (e) {

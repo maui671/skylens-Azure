@@ -46,7 +46,20 @@ sd-notify = "0.4"
 neli = "0.7"
 
 # Bluetooth LE scanning (BlueZ D-Bus bindings)
-bluer = { version = "0.17", features = ["bluetoothd"] }
+bluer = { version = "0.17", features = ["bluetoothd"], optional = true }
+dbus = { version = "0.9", features = ["vendored"], optional = true }
+
+# Complex numbers (pure Rust, used by DroneID OFDM decoder)
+num-complex = "0.4"
+
+# SDR capture (SoapySDR + FFT)
+soapysdr = { version = "0.4", optional = true }
+rustfft = { version = "6.2", optional = true }
+
+[features]
+default = ["ble"]
+ble = ["dep:bluer", "dep:dbus"]
+sdr = ["dep:soapysdr", "dep:rustfft"]
 
 [build-dependencies]
 prost-build = "0.13"

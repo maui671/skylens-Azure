@@ -52,6 +52,7 @@ type TrailManager struct {
 	trails  map[string]*DroneTrail
 	config  TrailConfig
 	maxAge  time.Duration // Auto-cleanup after this duration of inactivity
+	stopCh  chan struct{} // Closed on Stop() to exit cleanup goroutine
 }
 
 // NewTrailManager creates a new trail manager
@@ -60,12 +61,22 @@ func NewTrailManager(config TrailConfig) *TrailManager {
 		trails: make(map[string]*DroneTrail),
 		config: config,
 		maxAge: 10 * time.Minute,
+		stopCh: make(chan struct{}),
 	}
 
 	// Start cleanup goroutine
 	go tm.cleanupLoop()
 
 	return tm
+}
+
+// Stop shuts down the cleanup goroutine
+func (tm *TrailManager) Stop() {
+	select {
+	case <-tm.stopCh:
+	default:
+		close(tm.stopCh)
+	}
 }
 
 // RecordPosition adds a position to the drone's trail
@@ -210,12 +221,16 @@ func (tm *TrailManager) GetTrailStats(identifier string) *TrailStats {
 	trail, exists := tm.trails[identifier]
 	tm.mu.RUnlock()
 
-	if !exists || len(trail.samples) == 0 {
+	if !exists {
 		return nil
 	}
 
 	trail.mu.RLock()
 	defer trail.mu.RUnlock()
+
+	if len(trail.samples) == 0 {
+		return nil
+	}
 
 	stats := &TrailStats{
 		Identifier:    identifier,
@@ -277,8 +292,13 @@ func (tm *TrailManager) cleanupLoop() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		tm.cleanup()
+	for {
+		select {
+		case <-ticker.C:
+			tm.cleanup()
+		case <-tm.stopCh:
+			return
+		}
 	}
 }
 

@@ -10,7 +10,58 @@ pub mod proto {
 use anyhow::Result;
 use capture::channel::{setup_monitor_mode, ChannelHopper};
 use capture::pcap::{PcapCapture, PacketResult};
+#[cfg(feature = "ble")]
 use capture::ble::BleStats;
+#[cfg(feature = "sdr")]
+use capture::sdr::SdrStats;
+
+/// Stub BLE stats when compiled without BLE support
+#[cfg(not(feature = "ble"))]
+pub struct BleStats {
+    pub advertisements: AtomicU64,
+    pub detections: AtomicU64,
+    pub scanning: AtomicBool,
+    pub devices_seen: AtomicU64,
+    pub channel_drops: AtomicU64,
+    pub svc_data_events: AtomicU64,
+    pub mfr_data_events: AtomicU64,
+}
+
+#[cfg(not(feature = "ble"))]
+impl Default for BleStats {
+    fn default() -> Self {
+        Self {
+            advertisements: AtomicU64::new(0),
+            detections: AtomicU64::new(0),
+            scanning: AtomicBool::new(false),
+            devices_seen: AtomicU64::new(0),
+            channel_drops: AtomicU64::new(0),
+            svc_data_events: AtomicU64::new(0),
+            mfr_data_events: AtomicU64::new(0),
+        }
+    }
+}
+
+/// Stub SDR stats when compiled without SDR support
+#[cfg(not(feature = "sdr"))]
+pub struct SdrStats {
+    pub detections: AtomicU64,
+    pub scans: AtomicU64,
+    pub scanning: AtomicBool,
+    pub current_freq_mhz: AtomicI32,
+}
+
+#[cfg(not(feature = "sdr"))]
+impl Default for SdrStats {
+    fn default() -> Self {
+        Self {
+            detections: AtomicU64::new(0),
+            scans: AtomicU64::new(0),
+            scanning: AtomicBool::new(false),
+            current_freq_mhz: AtomicI32::new(0),
+        }
+    }
+}
 use config::Config;
 use decode::baseline::{BssidBaseline, BaselineMetrics};
 use decode::frame::{self, format_mac, is_dji_droneid_ie, is_remoteid_ie, is_parrot_ie, is_autel_ie, get_drone_manufacturer_from_oui, FrameType};
@@ -540,6 +591,7 @@ async fn main() -> Result<()> {
     }
 
     // BLE MAC denylist — string format (XX:XX:XX:XX:XX:XX uppercase) for BLE scanner
+    #[allow(unused_variables)]
     let ble_mac_denylist: Arc<HashSet<String>> = Arc::new(
         config.capture.mac_denylist.iter()
             .map(|s| s.to_uppercase())
@@ -559,7 +611,11 @@ async fn main() -> Result<()> {
     }
 
     // BLE scanner: check availability and clone det_tx before pcap thread takes it
+    #[cfg(feature = "ble")]
     let ble_enabled = config.ble.enabled && capture::ble::is_ble_available(&config.ble.adapter);
+    #[cfg(not(feature = "ble"))]
+    let ble_enabled = false;
+    #[cfg(feature = "ble")]
     let det_tx_for_ble = if ble_enabled {
         Some(det_tx.clone())
     } else {
@@ -569,6 +625,15 @@ async fn main() -> Result<()> {
         None
     };
     let ble_stats = Arc::new(BleStats::default());
+
+    // SDR scanner: clone det_tx before pcap thread takes it
+    let sdr_enabled = config.sdr.enabled;
+    let det_tx_for_sdr = if sdr_enabled {
+        Some(det_tx.clone())
+    } else {
+        None
+    };
+    let sdr_stats = Arc::new(SdrStats::default());
 
     // Spawn the capture thread (blocking pcap reads in a dedicated thread)
     let cap_intel = intel.clone();
@@ -607,6 +672,7 @@ async fn main() -> Result<()> {
         })?;
 
     // Spawn BLE scanner task (if enabled and adapter available)
+    #[cfg(feature = "ble")]
     if let Some(ble_tx) = det_tx_for_ble {
         let ble_stop = pcap_stop.clone();
         let ble_adapter = config.ble.adapter.clone();
@@ -617,6 +683,26 @@ async fn main() -> Result<()> {
             capture::ble::ble_scan_loop(ble_adapter, ble_stop, ble_tx, ble_tap_id, bs, ble_denylist).await;
         });
         info!(adapter = config.ble.adapter, "BLE scanner task spawned");
+    }
+
+    // Spawn SDR scanner task (if enabled)
+    if let Some(sdr_tx) = det_tx_for_sdr {
+        let sdr_stop = pcap_stop.clone();
+        let sdr_config = config.sdr.clone();
+        let sdr_tap_id = config.tap.id.clone();
+        let ss = sdr_stats.clone();
+        tokio::spawn(async move {
+            #[cfg(feature = "sdr")]
+            {
+                capture::sdr::sdr_scan_loop(sdr_config, sdr_stop, sdr_tx, sdr_tap_id, ss).await;
+            }
+            #[cfg(not(feature = "sdr"))]
+            {
+                let _ = (sdr_config, sdr_stop, sdr_tx, sdr_tap_id, ss);
+                warn!("SDR enabled in config but binary compiled without 'sdr' feature");
+            }
+        });
+        info!(device = config.sdr.device, bands = config.sdr.bands.len(), "SDR scanner task spawned");
     }
 
     // Spawn heartbeat task with buffer metrics
@@ -633,6 +719,9 @@ async fn main() -> Result<()> {
     let hb_ble_stats = ble_stats.clone();
     let hb_ble_enabled = ble_enabled;
     let hb_ble_adapter = config.ble.adapter.clone();
+    let hb_sdr_stats = sdr_stats.clone();
+    let hb_sdr_enabled = sdr_enabled;
+    let hb_sdr_device = config.sdr.device.clone();
     let start_time = Instant::now();
 
     tokio::spawn(async move {
@@ -650,6 +739,9 @@ async fn main() -> Result<()> {
             &hb_ble_stats,
             hb_ble_enabled,
             &hb_ble_adapter,
+            &hb_sdr_stats,
+            hb_sdr_enabled,
+            &hb_sdr_device,
             start_time,
         )
         .await;
@@ -673,6 +765,7 @@ async fn main() -> Result<()> {
     let stats_last_hop = last_hop_time.clone();
     let stats_ble = ble_stats.clone();
     let stats_hb_sent = nats.heartbeats_sent.clone();
+    let watchdog_nats = nats.clone();
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(10));
@@ -768,6 +861,23 @@ async fn main() -> Result<()> {
                             "WATCHDOG: pcap stuck — no new packets for {}s, exiting for systemd restart",
                             watchdog_stale_ticks * 10
                         );
+                        // Drain NATS buffer before forced exit to avoid losing detections
+                        warn!(
+                            buffer_size = watchdog_nats.buffer_size(),
+                            "WATCHDOG: draining NATS buffer before exit"
+                        );
+                        match tokio::time::timeout(
+                            Duration::from_secs(2),
+                            watchdog_nats.shutdown(),
+                        ).await {
+                            Ok(Ok(())) => {}
+                            Ok(Err(e)) => warn!(error = %e, "WATCHDOG: buffer drain failed"),
+                            Err(_) => warn!("WATCHDOG: buffer drain timed out after 2s"),
+                        }
+                        let _ = tokio::time::timeout(
+                            Duration::from_secs(1),
+                            watchdog_nats.flush(),
+                        ).await;
                         std::process::exit(1);
                     } else if watchdog_stale_ticks >= 3 {
                         warn!(
@@ -1379,6 +1489,23 @@ async fn handle_command(
                 };
                 let _ = nats.publish_ack(&ack).await;
                 let _ = nats.flush().await;
+                // Drain NATS buffer before exit to avoid losing detections
+                warn!(
+                    buffer_size = nats.buffer_size(),
+                    "Non-graceful restart: draining NATS buffer before exit"
+                );
+                match tokio::time::timeout(
+                    Duration::from_secs(2),
+                    nats.shutdown(),
+                ).await {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => warn!(error = %e, "Buffer drain failed before exit"),
+                    Err(_) => warn!("Buffer drain timed out after 2s before exit"),
+                }
+                let _ = tokio::time::timeout(
+                    Duration::from_secs(1),
+                    nats.flush(),
+                ).await;
                 std::process::exit(0);
             }
         }
@@ -2522,6 +2649,9 @@ async fn heartbeat_loop(
     ble_stats: &Arc<BleStats>,
     ble_enabled: bool,
     ble_adapter: &str,
+    sdr_stats: &Arc<SdrStats>,
+    sdr_enabled: bool,
+    sdr_device: &str,
     start_time: Instant,
 ) {
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
@@ -2614,6 +2744,12 @@ async fn heartbeat_loop(
                 ble_detections: ble_stats.detections.load(Ordering::Relaxed),
                 ble_scanning: ble_stats.scanning.load(Ordering::Relaxed),
                 ble_interface: if ble_enabled { ble_adapter.to_string() } else { String::new() },
+                // SDR scanner
+                sdr_detections: sdr_stats.detections.load(Ordering::Relaxed),
+                sdr_scans: sdr_stats.scans.load(Ordering::Relaxed),
+                sdr_scanning: sdr_stats.scanning.load(Ordering::Relaxed),
+                sdr_device: if sdr_enabled { sdr_device.to_string() } else { String::new() },
+                sdr_current_freq_mhz: sdr_stats.current_freq_mhz.load(Ordering::Relaxed),
             }),
             ..Default::default()
         };

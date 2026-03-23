@@ -19,18 +19,26 @@ type Handlers struct {
 	service    *Service
 	middleware *Middleware
 	limiter    *RateLimiter
+	done       chan struct{} // Closed on shutdown to stop background goroutines
 }
 
 // NewHandlers creates new auth handlers
 func NewHandlers(service *Service, middleware *Middleware) *Handlers {
 	// Create rate limiter: 10 auth requests per minute per IP
 	limiter := NewRateLimiter(10, time.Minute)
+	done := make(chan struct{})
 
-	// Start cleanup goroutine
+	// Start cleanup goroutine (exits when done is closed)
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
-		for range ticker.C {
-			limiter.Cleanup()
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				limiter.Cleanup()
+			}
 		}
 	}()
 
@@ -38,7 +46,13 @@ func NewHandlers(service *Service, middleware *Middleware) *Handlers {
 		service:    service,
 		middleware: middleware,
 		limiter:    limiter,
+		done:       done,
 	}
+}
+
+// Close stops background goroutines.
+func (h *Handlers) Close() {
+	close(h.done)
 }
 
 // HandleLogin processes login requests

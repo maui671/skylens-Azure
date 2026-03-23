@@ -21,7 +21,7 @@ import (
 )
 
 // Lock file in working directory (must be writable under systemd ProtectHome=read-only)
-const lockFile = "/var/lib/skylens/skylens-node.lock"
+const lockFile = "/opt/skylens/skylens-node.lock"
 
 // lockFileHandle holds the lock file descriptor for cleanup
 var lockFileHandle *os.File
@@ -247,10 +247,11 @@ func main() {
 	}
 	defer recv.Close()
 
-	// Initialize API server (HTTP + WebSocket)
+	// Initialize API server (HTTPS + TLS)
 	serverCfg := api.ServerConfig{
-		HTTPPort:       cfg.Server.HTTPPort,
-		WebSocketPort:  cfg.Server.WebSocketPort,
+		HTTPSPort:   cfg.Server.HTTPSPort,
+		TLSCertFile: cfg.Server.TLSCertFile,
+		TLSKeyFile:  cfg.Server.TLSKeyFile,
 		AllowedOrigins: cfg.Server.AllowedOrigins,
 		AuthEnabled:    cfg.Auth.Enabled,
 		JWTSecret:      cfg.Auth.JWTSecret,
@@ -496,6 +497,22 @@ func main() {
 		}
 	})
 
+	// Periodically prune store rate-limit maps to prevent unbounded growth
+	if store != nil {
+		go safeGo("store-prune", func() {
+			ticker := time.NewTicker(10 * time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					store.PruneRateLimitMaps(10 * time.Minute)
+				}
+			}
+		})
+	}
+
 	// Start data retention cleanup goroutine (removes old detections from database)
 	if store != nil {
 		maxAge := time.Duration(cfg.Detection.MaxHistoryHours) * time.Hour
@@ -523,11 +540,11 @@ func main() {
 						slog.Info("Cleaned old detections", "deleted", deleted, "max_age_hours", cfg.Detection.MaxHistoryHours)
 					}
 
-					// Also cleanup old drone entries (30 days)
-					if deleted, err := store.CleanupOldDrones(30 * 24 * time.Hour); err != nil {
+					// Also cleanup old drone entries (uses same maxAge as detections from config)
+					if deleted, err := store.CleanupOldDrones(maxAge); err != nil {
 						slog.Warn("Failed to cleanup old drones", "error", err)
 					} else if deleted > 0 {
-						slog.Info("Cleaned old drone entries", "deleted", deleted)
+						slog.Info("Cleaned old drone entries", "deleted", deleted, "max_age_hours", cfg.Detection.MaxHistoryHours)
 					}
 				}
 			}
@@ -535,8 +552,9 @@ func main() {
 	}
 
 	slog.Info("Skylens Node is running",
-		"http", cfg.Server.HTTPPort,
-		"websocket", cfg.Server.WebSocketPort,
+		"https", cfg.Server.HTTPSPort,
+		"tls_cert_file", cfg.Server.TLSCertFile,
+		"tls_key_file", cfg.Server.TLSKeyFile,
 		"nats", cfg.NATS.URL,
 	)
 

@@ -15,7 +15,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -147,8 +146,9 @@ var staticFiles embed.FS
 
 // ServerConfig holds server settings
 type ServerConfig struct {
-	HTTPPort       int
-	WebSocketPort  int
+	HTTPSPort    int
+	TLSCertFile  string
+	TLSKeyFile   string
 	APIKey         string   // Optional API key for authentication
 	AllowedOrigins []string // Allowed WebSocket origins (empty = same-origin only)
 
@@ -179,7 +179,6 @@ type Server struct {
 	wsBatcher   *wsBatcher // Batches events for efficient WebSocket broadcast
 	rateLimiter *RateLimiter
 	httpServer  *http.Server
-	wsServer    *http.Server
 	activeConns int64     // atomic counter for graceful shutdown
 	startTime   time.Time // server start time for uptime
 	authInt     *AuthIntegration // Auth integration (nil if auth disabled)
@@ -187,6 +186,7 @@ type Server struct {
 	tapStatus   map[string]string   // Track tap status for change detection
 	alertedMu   sync.Mutex          // Protects alerted and tapStatus maps
 	shutdownCh  chan struct{}        // Closed on Shutdown() to stop background goroutines
+	eventCh     chan processor.StateEvent // State event channel (for cleanup on shutdown)
 	wsTickets   map[string]*wsTicket // One-time WebSocket auth tickets
 	wsTicketMu  sync.Mutex
 }
@@ -278,9 +278,9 @@ func NewServer(cfg ServerConfig, state *processor.StateManager, store *storage.S
 	}
 
 	// Subscribe to state events for WebSocket broadcasting
-	eventCh := make(chan processor.StateEvent, 2000)
-	state.Subscribe(eventCh)
-	go s.collectEvents(eventCh)
+	s.eventCh = make(chan processor.StateEvent, 2000)
+	state.Subscribe(s.eventCh)
+	go s.collectEvents(s.eventCh)
 	go s.flushBatchedEvents()
 
 	// Enable alert persistence via the store
@@ -313,9 +313,9 @@ func NewServer(cfg ServerConfig, state *processor.StateManager, store *storage.S
 		}
 	}
 
-	// Start cleanup goroutines
-	startAlertCleanup()
-	startSuspectCleanup()
+	// Start cleanup goroutines (all listen to shutdownCh for clean exit)
+	startAlertCleanup(s.shutdownCh)
+	startSuspectCleanup(s.shutdownCh)
 	go s.cleanupWSTickets()
 
 	return s
@@ -339,7 +339,7 @@ func (s *Server) Start(ctx context.Context) {
 	handler = s.rateLimitMiddleware(handler)
 
 	s.httpServer = &http.Server{
-		Addr:         fmt.Sprintf(":%d", s.cfg.HTTPPort),
+		Addr:         fmt.Sprintf(":%d", s.cfg.HTTPSPort),
 		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -347,30 +347,13 @@ func (s *Server) Start(ctx context.Context) {
 	}
 
 	go func() {
-		slog.Info("HTTP server starting", "port", s.cfg.HTTPPort)
-		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
+		slog.Info("HTTPS server starting", "port", s.cfg.HTTPSPort, "cert", s.cfg.TLSCertFile, "key", s.cfg.TLSKeyFile)
+		if err := s.httpServer.ListenAndServeTLS(s.cfg.TLSCertFile, s.cfg.TLSKeyFile); err != http.ErrServerClosed {
 			slog.Error("HTTP server error", "error", err)
 		}
 	}()
 
 	// WebSocket server (separate port for real-time)
-	wsMux := http.NewServeMux()
-	wsMux.HandleFunc("/ws", s.handleWebSocket)
-
-	s.wsServer = &http.Server{
-		Addr:         fmt.Sprintf(":%d", s.cfg.WebSocketPort),
-		Handler:      wsMux,
-		ReadTimeout:  0, // No timeout for WebSocket
-		WriteTimeout: 0,
-		IdleTimeout:  0,
-	}
-
-	go func() {
-		slog.Info("WebSocket server starting", "port", s.cfg.WebSocketPort)
-		if err := s.wsServer.ListenAndServe(); err != http.ErrServerClosed {
-			slog.Error("WebSocket server error", "error", err)
-		}
-	}()
 
 	<-ctx.Done()
 	s.gracefulShutdown()
@@ -567,15 +550,20 @@ func (s *Server) consumeWSTicket(ticket string) *wsTicket {
 func (s *Server) cleanupWSTickets() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
-		now := time.Now()
-		s.wsTicketMu.Lock()
-		for k, t := range s.wsTickets {
-			if now.After(t.expires) {
-				delete(s.wsTickets, k)
+	for {
+		select {
+		case <-s.shutdownCh:
+			return
+		case <-ticker.C:
+			now := time.Now()
+			s.wsTicketMu.Lock()
+			for k, t := range s.wsTickets {
+				if now.After(t.expires) {
+					delete(s.wsTickets, k)
+				}
 			}
+			s.wsTicketMu.Unlock()
 		}
-		s.wsTicketMu.Unlock()
 	}
 }
 
@@ -627,6 +615,21 @@ func (s *Server) gracefulShutdown() {
 	s.wsClients = make(map[*websocket.Conn]*wsClient)
 	s.wsMu.Unlock()
 
+	// Unsubscribe event channel so StateManager stops broadcasting to it,
+	// then close the channel so collectEvents exits cleanly.
+	if s.eventCh != nil {
+		s.state.Unsubscribe(s.eventCh)
+		close(s.eventCh)
+	}
+
+	// Stop rate limiter cleanup goroutine
+	s.rateLimiter.Close()
+
+	// Stop auth cleanup goroutines
+	if s.authInt != nil {
+		s.authInt.Close()
+	}
+
 	// Create shutdown context with timeout
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -634,11 +637,6 @@ func (s *Server) gracefulShutdown() {
 	// Shutdown HTTP server
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 		slog.Warn("HTTP server shutdown error", "error", err)
-	}
-
-	// Shutdown WebSocket server
-	if err := s.wsServer.Shutdown(shutdownCtx); err != nil {
-		slog.Warn("WebSocket server shutdown error", "error", err)
 	}
 
 	// Wait for active connections to drain (up to 5 seconds)
@@ -673,6 +671,9 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 			http.HandlerFunc(s.handleWSTicket)))
 	}
 
+	// WebSocket endpoint
+	mux.HandleFunc("/ws", s.handleWebSocket)
+
 	// Helper to wrap handlers with auth middleware when auth is enabled
 	protect := func(h http.HandlerFunc) http.Handler {
 		if s.authInt != nil {
@@ -696,12 +697,6 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.Handle("/api/alerts/", protect(s.handleAlertsAction)) // /api/alerts/ack-all, /api/alerts/clear
 	mux.Handle("/api/system/stats", protect(s.handleSystemStats))
 	mux.Handle("/api/events", protect(s.handleSSE))
-
-	// Tailscale routes - protected (system configuration)
-	mux.Handle("/api/tailscale/status", protect(s.handleTailscaleStatus))
-	mux.Handle("/api/tailscale/connect", protect(s.handleTailscaleConnect))
-	mux.Handle("/api/tailscale/disconnect", protect(s.handleTailscaleDisconnect))
-	mux.Handle("/api/tailscale/logout", protect(s.handleTailscaleLogout))
 
 	// UAV management routes - protected
 	mux.Handle("/api/uav/", protect(s.handleUAVAction))       // /api/uav/{id}/hide, /api/uav/{id}/delete, /api/uav/{id}/history
@@ -884,16 +879,22 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	taps := s.state.GetAllTaps()
 	uptime := time.Since(serverStartTime).Seconds()
 
-	// Count drones by status
+	// Count drones by status (exclude controllers)
 	activeCount := 0
 	lostCount := 0
+	controllerCount := 0
 	for _, d := range drones {
+		if d.IsController {
+			controllerCount++
+			continue
+		}
 		if d.Status == "active" {
 			activeCount++
 		} else if d.Status == "lost" {
 			lostCount++
 		}
 	}
+	droneTotal := activeCount + lostCount
 
 	// Count connected taps
 	connectedTaps := 0
@@ -918,9 +919,13 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "# TYPE skylens_uptime_seconds gauge\n")
 	fmt.Fprintf(w, "skylens_uptime_seconds %.2f\n\n", uptime)
 
-	fmt.Fprintf(w, "# HELP skylens_drones_total Total number of tracked drones\n")
+	fmt.Fprintf(w, "# HELP skylens_drones_total Total number of tracked drones (excluding controllers)\n")
 	fmt.Fprintf(w, "# TYPE skylens_drones_total gauge\n")
-	fmt.Fprintf(w, "skylens_drones_total %d\n\n", len(drones))
+	fmt.Fprintf(w, "skylens_drones_total %d\n\n", droneTotal)
+
+	fmt.Fprintf(w, "# HELP skylens_controllers_total Total number of tracked controllers\n")
+	fmt.Fprintf(w, "# TYPE skylens_controllers_total gauge\n")
+	fmt.Fprintf(w, "skylens_controllers_total %d\n\n", controllerCount)
 
 	fmt.Fprintf(w, "# HELP skylens_drones_active Number of active drones\n")
 	fmt.Fprintf(w, "# TYPE skylens_drones_active gauge\n")
@@ -1088,9 +1093,6 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	uptime := time.Since(serverStartTime)
 	uptimeStr := formatUptime(uptime)
 
-	// Get Tailscale status
-	tsStatus := getTailscaleStatusCached()
-
 	// Get alerts
 	alertMu.Lock()
 	alertsCopy := make([]Alert, len(alerts))
@@ -1106,7 +1108,6 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		"uptime":         uptimeStr,
 		"node_name":      "skylens-node",
 		"version":        "0.1.0",
-		"tailscale":      tsStatus,
 		"intel_version":  intel.GetDroneModelsVersion("internal/intel/drone_models.json"),
 	}
 
@@ -1124,84 +1125,6 @@ func formatUptime(d time.Duration) string {
 		return fmt.Sprintf("%dh %dm", hours, mins)
 	}
 	return fmt.Sprintf("%dm", mins)
-}
-
-// Tailscale status cache (avoids exec.Command on every poll)
-var (
-	tsCache     map[string]interface{}
-	tsCacheTime time.Time
-	tsCacheMu   sync.Mutex
-)
-
-func getTailscaleStatusCached() map[string]interface{} {
-	tsCacheMu.Lock()
-	defer tsCacheMu.Unlock()
-	if time.Since(tsCacheTime) < 30*time.Second && tsCache != nil {
-		return tsCache
-	}
-	tsCache = getTailscaleStatus()
-	tsCacheTime = time.Now()
-	return tsCache
-}
-
-func getTailscaleStatus() map[string]interface{} {
-	out, err := exec.Command("tailscale", "status", "--json").Output()
-	if err != nil {
-		return map[string]interface{}{
-			"installed": false,
-			"connected": false,
-		}
-	}
-
-	var status map[string]interface{}
-	if err := json.Unmarshal(out, &status); err != nil {
-		return map[string]interface{}{
-			"installed": true,
-			"connected": false,
-		}
-	}
-
-	// Extract relevant fields
-	self, _ := status["Self"].(map[string]interface{})
-	backendState, _ := status["BackendState"].(string)
-
-	result := map[string]interface{}{
-		"installed": true,
-		"connected": backendState == "Running",
-	}
-
-	if self != nil {
-		if ips, ok := self["TailscaleIPs"].([]interface{}); ok && len(ips) > 0 {
-			result["ip"] = ips[0]
-		}
-		if hostname, ok := self["HostName"].(string); ok {
-			result["hostname"] = hostname
-		}
-		if dnsName, ok := self["DNSName"].(string); ok {
-			result["dns_name"] = dnsName
-		}
-	}
-
-	// Get peers
-	if peers, ok := status["Peer"].(map[string]interface{}); ok {
-		peerList := make([]map[string]interface{}, 0)
-		for _, p := range peers {
-			if peer, ok := p.(map[string]interface{}); ok {
-				peerInfo := map[string]interface{}{
-					"hostname": peer["HostName"],
-					"os":       peer["OS"],
-					"online":   peer["Online"],
-				}
-				if ips, ok := peer["TailscaleIPs"].([]interface{}); ok && len(ips) > 0 {
-					peerInfo["ip"] = ips[0]
-				}
-				peerList = append(peerList, peerInfo)
-			}
-		}
-		result["peers"] = peerList
-	}
-
-	return result
 }
 
 // handleDrones returns all drones
@@ -1471,7 +1394,8 @@ func (s *Server) wsReadLoop(conn *websocket.Conn) {
 	}
 }
 
-// wsWrite sends a message to a WebSocket client (thread-safe)
+// wsWrite sends a message to a WebSocket client (thread-safe).
+// Closes the connection on write failure so the read loop removes it.
 func (s *Server) wsWrite(client *wsClient, msg interface{}) {
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -1479,12 +1403,19 @@ func (s *Server) wsWrite(client *wsClient, msg interface{}) {
 	}
 	client.writeMu.Lock()
 	client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	client.conn.WriteMessage(websocket.TextMessage, data)
+	if err := client.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+		client.conn.Close() // Triggers cleanup in read loop
+	}
 	client.writeMu.Unlock()
 }
 
 // collectEvents adds state events to the batch for efficient broadcasting
 func (s *Server) collectEvents(eventCh <-chan processor.StateEvent) {
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("collectEvents panic recovered", "panic", r)
+		}
+	}()
 	for event := range eventCh {
 		msg := map[string]interface{}{
 			"type": event.Type,
@@ -1548,7 +1479,9 @@ func (s *Server) sendImmediate(msg map[string]interface{}) {
 	for _, client := range clients {
 		client.writeMu.Lock()
 		client.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		client.conn.WriteMessage(websocket.TextMessage, data)
+		if err := client.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			client.conn.Close() // Triggers cleanup in read loop
+		}
 		client.writeMu.Unlock()
 	}
 }
@@ -1758,7 +1691,7 @@ func (s *Server) flushWSBatch() {
 		client.writeMu.Lock()
 		client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		if err := client.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			// Client will be removed in read loop
+			client.conn.Close() // Ensure cleanup even if read loop already exited
 		}
 		client.writeMu.Unlock()
 	}
@@ -1774,17 +1707,24 @@ func (s *Server) writeJSON(w http.ResponseWriter, data interface{}) {
 	json.NewEncoder(w).Encode(data)
 }
 
-// setCORSHeaders adds CORS headers with proper origin validation
-// Per CORS spec: Access-Control-Allow-Origin: * with Credentials: true is forbidden.
-// We echo the request Origin to allow credentialed cross-origin requests (e.g. Tailscale).
+// setCORSHeaders adds CORS headers with origin validation against AllowedOrigins config.
+// Only origins explicitly listed in AllowedOrigins (or "*") are reflected back.
+// This prevents malicious websites from making credentialed cross-origin requests.
 func (s *Server) setCORSHeaders(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 	if origin != "" {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		allowed := false
+		for _, o := range s.cfg.AllowedOrigins {
+			if o == "*" || o == origin {
+				allowed = true
+				break
+			}
+		}
+		if allowed {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
 		w.Header().Set("Vary", "Origin")
-	} else {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 	}
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key, X-CSRF-Token")
@@ -1964,8 +1904,11 @@ func (s *Server) handleTestTap(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-var simulationRunning bool
-var simulationCancel context.CancelFunc
+var (
+	simulationRunning bool
+	simulationCancel  context.CancelFunc
+	simulationMu      sync.Mutex
+)
 
 // handleSimulate starts/stops drone simulation
 func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
@@ -1975,6 +1918,9 @@ func (s *Server) handleSimulate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	action := r.URL.Query().Get("action")
+
+	simulationMu.Lock()
+	defer simulationMu.Unlock()
 
 	if action == "stop" {
 		if simulationCancel != nil {
@@ -2451,13 +2397,18 @@ func RemoveSuspect(mac string) bool {
 // startSuspectCleanup starts the background suspect cleanup goroutine
 var suspectCleanupOnce sync.Once
 
-func startSuspectCleanup() {
+func startSuspectCleanup(done <-chan struct{}) {
 	suspectCleanupOnce.Do(func() {
 		go func() {
 			ticker := time.NewTicker(30 * time.Second)
 			defer ticker.Stop()
-			for range ticker.C {
-				cleanupSuspects()
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					cleanupSuspects()
+				}
 			}
 		}()
 	})
@@ -2501,13 +2452,18 @@ func GetChannelBand(channel int32) string {
 }
 
 // startAlertCleanup starts the background alert cleanup goroutine
-func startAlertCleanup() {
+func startAlertCleanup(done <-chan struct{}) {
 	alertCleanupOnce.Do(func() {
 		go func() {
 			ticker := time.NewTicker(alertCleanup)
 			defer ticker.Stop()
-			for range ticker.C {
-				cleanupAlerts()
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					cleanupAlerts()
+				}
 			}
 		}()
 	})
@@ -2589,7 +2545,6 @@ func normalizePriority(p string) string {
 // AddAlert adds a new alert with automatic TTL
 func AddAlert(priority, alertType, identifier, message string) {
 	priority = normalizePriority(priority)
-	startAlertCleanup() // Ensure cleanup is running
 
 	now := time.Now()
 	alert := Alert{
@@ -3339,106 +3294,6 @@ func (s *Server) handleSystemStats(w http.ResponseWriter, r *http.Request) {
 		"db_status":      dbStatus,
 		"pipeline":       pipeline,
 	})
-}
-
-// handleTailscaleStatus returns Tailscale VPN status
-func (s *Server) handleTailscaleStatus(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	if r.Method == "OPTIONS" {
-		return
-	}
-
-	// Check if tailscale is running
-	out, err := exec.Command("tailscale", "status", "--json").Output()
-	if err != nil {
-		s.writeJSON(w, map[string]interface{}{
-			"connected": false,
-			"error":     "Tailscale not available",
-		})
-		return
-	}
-
-	var status map[string]interface{}
-	if err := json.Unmarshal(out, &status); err != nil {
-		s.writeJSON(w, map[string]interface{}{
-			"connected": false,
-			"error":     "Failed to parse status",
-		})
-		return
-	}
-
-	s.writeJSON(w, status)
-}
-
-// handleTailscaleConnect connects to Tailscale
-func (s *Server) handleTailscaleConnect(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	if r.Method == "OPTIONS" {
-		return
-	}
-
-	var body struct {
-		AuthKey  string `json:"authkey"`
-		Hostname string `json:"hostname"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	args := []string{"up", "--authkey=" + body.AuthKey}
-	if body.Hostname != "" {
-		args = append(args, "--hostname="+body.Hostname)
-	}
-
-	cmd := exec.Command("sudo", append([]string{"tailscale"}, args...)...)
-	if err := cmd.Run(); err != nil {
-		s.writeJSON(w, map[string]interface{}{
-			"ok":    false,
-			"error": err.Error(),
-		})
-		return
-	}
-
-	s.writeJSON(w, map[string]bool{"ok": true})
-}
-
-// handleTailscaleDisconnect disconnects from Tailscale
-func (s *Server) handleTailscaleDisconnect(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	if r.Method == "OPTIONS" {
-		return
-	}
-
-	cmd := exec.Command("sudo", "tailscale", "down")
-	if err := cmd.Run(); err != nil {
-		s.writeJSON(w, map[string]interface{}{
-			"ok":    false,
-			"error": err.Error(),
-		})
-		return
-	}
-
-	s.writeJSON(w, map[string]bool{"ok": true})
-}
-
-// handleTailscaleLogout logs out of Tailscale
-func (s *Server) handleTailscaleLogout(w http.ResponseWriter, r *http.Request) {
-	s.setCORSHeaders(w, r)
-	if r.Method == "OPTIONS" {
-		return
-	}
-
-	cmd := exec.Command("sudo", "tailscale", "logout")
-	if err := cmd.Run(); err != nil {
-		s.writeJSON(w, map[string]interface{}{
-			"ok":    false,
-			"error": err.Error(),
-		})
-		return
-	}
-
-	s.writeJSON(w, map[string]bool{"ok": true})
 }
 
 // handleClearData clears all test data

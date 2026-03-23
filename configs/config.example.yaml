@@ -2,9 +2,10 @@
 # Copy to config.yaml and edit with your settings
 
 server:
-  http_port: 8080
-  websocket_port: 8081
-  # allowed_origins: ["*"]
+  https_port: 443
+  tls_cert_file: /etc/skylens/certs/skylens.crt
+  tls_key_file: /etc/skylens/certs/skylens.key
+  allowed_origins: ["*"]
 
 nats:
   url: "nats://localhost:4222"

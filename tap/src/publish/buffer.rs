@@ -408,6 +408,13 @@ async fn buffer_worker(
     // Batch flush: track whether we have un-flushed publishes
     let mut needs_flush = false;
 
+    // Force-reconnect after consecutive flush timeouts.
+    // Tailscale DERP relays can go stale — the TCP socket looks alive but data
+    // doesn't flow. async_nats reports Connected but publishes time out forever.
+    // After 5 consecutive flush timeouts (~10s), we force a NATS reconnect.
+    let mut consecutive_flush_timeouts: u32 = 0;
+    const MAX_FLUSH_TIMEOUTS: u32 = 5;
+
     info!(
         tap_id = %tap_id,
         max_size = config.max_size,
@@ -549,13 +556,47 @@ async fn buffer_worker(
                     match tokio::time::timeout(Duration::from_secs(2), client.flush()).await {
                         Ok(Ok(())) => {
                             needs_flush = false;
+                            if consecutive_flush_timeouts > 0 {
+                                info!(
+                                    previous_timeouts = consecutive_flush_timeouts,
+                                    "NATS flush recovered"
+                                );
+                                consecutive_flush_timeouts = 0;
+                            }
                         }
                         Ok(Err(e)) => {
                             warn!(error = %e, "Periodic flush failed");
+                            consecutive_flush_timeouts += 1;
                         }
                         Err(_) => {
-                            warn!("Periodic flush timeout (2s)");
+                            consecutive_flush_timeouts += 1;
+                            warn!(
+                                consecutive = consecutive_flush_timeouts,
+                                max = MAX_FLUSH_TIMEOUTS,
+                                "Periodic flush timeout (2s)"
+                            );
                         }
+                    }
+
+                    // Force reconnect if too many consecutive flush timeouts.
+                    // This breaks the stale DERP relay TCP socket and forces
+                    // async_nats to establish a fresh connection.
+                    if consecutive_flush_timeouts >= MAX_FLUSH_TIMEOUTS {
+                        warn!(
+                            consecutive = consecutive_flush_timeouts,
+                            "Too many consecutive flush timeouts — forcing NATS reconnect"
+                        );
+                        match client.force_reconnect().await {
+                            Ok(()) => {
+                                info!("NATS force reconnect initiated");
+                            }
+                            Err(e) => {
+                                error!(error = %e, "NATS force reconnect failed");
+                            }
+                        }
+                        consecutive_flush_timeouts = 0;
+                        needs_flush = false;
+                        buffer.set_connected(false);
                     }
                 }
             }

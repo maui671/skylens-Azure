@@ -73,7 +73,7 @@ impl NatsPublisher {
             info!(url = %mirror_url, "Connecting to mirror NATS");
             match async_nats::ConnectOptions::new()
                 .retry_on_initial_connect()
-                .ping_interval(std::time::Duration::from_secs(15))
+                .ping_interval(std::time::Duration::from_secs(5))
                 .max_reconnects(None)
                 .event_callback({
                     let url = mirror_url.clone();
@@ -136,15 +136,26 @@ impl NatsPublisher {
         self.buffered.publish_detection(detection, self.detection_topic.clone()).await?;
         self.messages_sent.fetch_add(1, Ordering::Relaxed);
 
-        // Fire-and-forget to mirrors — publish only, no flush per detection.
-        // async_nats auto-flushes its write buffer internally. Per-detection flush
-        // was blocking the hot path for up to 2s on slow WAN mirrors.
+        // Fire-and-forget to mirrors — spawned as detached tasks so they NEVER
+        // block the detection hot path. Flush after publish to ensure data
+        // actually hits the wire (async_nats buffers internally).
         if !self.mirror_clients.is_empty() {
             let data: bytes::Bytes = detection.encode_to_vec().into();
-            for mirror in &self.mirror_clients {
-                if let Err(e) = mirror.publish(self.detection_topic.clone(), data.clone()).await {
-                    debug!(error = %e, "Mirror detection publish failed");
-                }
+            let topic = self.detection_topic.clone();
+            for mirror in self.mirror_clients.clone() {
+                let data = data.clone();
+                let topic = topic.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = mirror.publish(topic, data).await {
+                        debug!(error = %e, "Mirror detection publish failed");
+                        return;
+                    }
+                    // Flush with timeout — don't let a slow mirror hang the task forever
+                    let _ = tokio::time::timeout(
+                        std::time::Duration::from_secs(2),
+                        mirror.flush()
+                    ).await;
+                });
             }
         }
 
@@ -160,13 +171,23 @@ impl NatsPublisher {
         self.buffered.publish_heartbeat(heartbeat, self.heartbeat_topic.clone()).await?;
         self.heartbeats_sent.fetch_add(1, Ordering::Relaxed);
 
-        // Fire-and-forget to mirrors — no per-message flush
+        // Fire-and-forget to mirrors — spawned with flush
         if !self.mirror_clients.is_empty() {
             let data: bytes::Bytes = heartbeat.encode_to_vec().into();
-            for mirror in &self.mirror_clients {
-                if let Err(e) = mirror.publish(self.heartbeat_topic.clone(), data.clone()).await {
-                    debug!(error = %e, "Mirror heartbeat publish failed");
-                }
+            let topic = self.heartbeat_topic.clone();
+            for mirror in self.mirror_clients.clone() {
+                let data = data.clone();
+                let topic = topic.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = mirror.publish(topic, data).await {
+                        debug!(error = %e, "Mirror heartbeat publish failed");
+                        return;
+                    }
+                    let _ = tokio::time::timeout(
+                        std::time::Duration::from_secs(2),
+                        mirror.flush()
+                    ).await;
+                });
             }
         }
 

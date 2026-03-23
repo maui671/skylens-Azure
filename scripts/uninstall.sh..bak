@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+echo "=== Skylens FULL UNINSTALL ==="
+echo "This will REMOVE all installed components."
+echo "It will NOT touch /home/tdcadmin/*"
+echo ""
+
+read -rp "Are you sure? (y/n): " CONFIRM
+[[ "$CONFIRM" != "y" ]] && echo "Aborted." && exit 1
+
+echo ""
+echo "[1/8] Stopping services..."
+systemctl stop skylens-node 2>/dev/null || true
+systemctl stop nats 2>/dev/null || true
+
+systemctl disable skylens-node 2>/dev/null || true
+systemctl disable nats 2>/dev/null || true
+
+echo "[2/8] Removing systemd units..."
+rm -f /etc/systemd/system/skylens-node.service
+rm -f /etc/systemd/system/nats.service
+systemctl daemon-reexec
+systemctl daemon-reload
+
+echo "[3/8] Removing application directories..."
+rm -rf /opt/skylens
+rm -rf /etc/skylens
+rm -rf /usr/local/go
+rm -f /etc/profile.d/go.sh
+
+echo "[4/8] Removing binaries..."
+rm -f /usr/bin/skylens-node
+rm -f /usr/local/bin/nats-server
+dnf remove -y go
+
+echo "[5/8] Removing PostgreSQL database and user..."
+if command -v psql >/dev/null 2>&1; then
+    sudo -u postgres psql <<EOF
+DROP DATABASE IF EXISTS skylens;
+DROP ROLE IF EXISTS skylens;
+EOF
+fi
+dnf remove -y postgresql16* redis
+
+echo "[6/8] Removing Redis data..."
+systemctl stop redis 2>/dev/null || true
+rm -rf /var/lib/redis/*
+systemctl start redis 2>/dev/null || true
+
+echo "[7/8] Removing firewall rules..."
+if systemctl is-active --quiet firewalld; then
+    firewall-cmd --permanent --remove-port=443/tcp || true
+    firewall-cmd --permanent --remove-port=4222/tcp || true
+    firewall-cmd --permanent --remove-port=8088/tcp || true
+    firewall-cmd --permanent --remove-port=8222/tcp || true
+    firewall-cmd --reload || true
+fi
+
+echo "[8/8] Removing logs and leftovers..."
+rm -f /var/log/skylens-install.log
+rm -rf /var/log/skylens*
+rm -rf /var/log/nats
+rm -rf /var/lib/nats
+
+echo ""
+echo "=== UNINSTALL COMPLETE ==="
+echo "System is clean."
+echo "Source code in /home/tdcadmin remains untouched."

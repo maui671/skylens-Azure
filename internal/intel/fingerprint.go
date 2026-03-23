@@ -43,6 +43,7 @@ var ouiMap = map[string]string{
 	"88:29:85": "DJI (drone)", // IEEE MA-L, registered 2025-10-29
 	"8C:58:23": "DJI (drone)", // IEEE MA-L, registered 2025-05-27
 	"E4:7A:2C": "DJI (drone)", // IEEE MA-L, registered 2023-10-19
+	"8C:1E:D9": "DJI (drone)", // Field-verified: Phantom 4 Pro V2 (Feb 2026 live test)
 
 	// ===== DJI BAIWANG TECHNOLOGY CO LTD (IEEE VERIFIED) =====
 	"9C:5A:8A": "DJI Baiwang (drone)", // IEEE MA-L, registered 2024-12-30
@@ -130,56 +131,54 @@ func init() {
 		modelHint    string
 		isController bool
 	}{
-		// DJI
+		// DJI — specific patterns FIRST, generic catch-all LAST
 		{`^PROJ[0-9a-fA-F]{6}$`, "DJI", "", "DJI RC Controller", true}, // DJI controller WiFi hotspot (e.g. PROJae291c)
 		{`^DJI[-_ ]RC`, "DJI", "", "controller", true},
 		{`^RM [A-Z0-9]+ \d+`, "DJI", "", "DJI RC Enterprise", true}, // DJI enterprise controller (e.g. RM E70536 1210091)
-		{`^DJI[-_ ]`, "DJI", "", "generic", false},
-		{`^TELLO[-_ ]`, "DJI/Ryze", "Tello", "", false},
-		{`^TELLO$`, "DJI/Ryze", "Tello", "", false},
-		{`^PHANTOM[-_ ]`, "DJI", "", "Phantom", false},
-		{`^MAVIC[-_ ]`, "DJI", "", "Mavic", false},
-		{`^SPARK[-_ ]`, "DJI", "Spark", "", false},
-		{`^INSPIRE[-_ ]`, "DJI", "", "Inspire", false},
-		{`^MATRICE`, "DJI", "", "Matrice", false},
+		// Specific DJI model patterns (must precede generic ^DJI[-_ ] catch-all)
+		{`^DJI[_ ]?FPV[-_ ]?2`, "DJI", "FPV 2", "", false},
 		{`^DJI[_ ]?FPV`, "DJI", "FPV", "", false},
+		{`^DJI[_ ]?AVATA[-_ ]?3`, "DJI", "Avata 3", "", false},
 		{`^DJI[_ ]?AVATA`, "DJI", "", "Avata", false},
+		{`^DJI[_ ]?NEO[-_ ]?2`, "DJI", "Neo 2", "", false},
 		{`^DJI[_ ]?NEO`, "DJI", "Neo", "", false},
 		{`^DJI[_ ]?FLIP`, "DJI", "Flip", "", false},
 		{`^DJI[_ ]?MAVIC[-_ ]?4`, "DJI", "", "Mavic 4", false},
 		{`^DJI[_ ]?MINI[-_ ]?5`, "DJI", "", "Mini 5", false},
 		{`^DJI[_ ]?AIR[-_ ]?4`, "DJI", "", "Air 4", false},
-		{`^DJI[_ ]?AVATA[-_ ]?3`, "DJI", "Avata 3", "", false},
-		{`^DJI[_ ]?FPV[-_ ]?2`, "DJI", "FPV 2", "", false},
-		{`^AGRAS[-_ ]`, "DJI", "", "Agras", false},
-		{`^AGRAST60`, "DJI", "Agras T60", "", false},
-		{`^AGRAST70`, "DJI", "Agras T70", "", false},
-		{`^AGRAST100`, "DJI", "Agras T100", "", false},
-		{`^FLYCART`, "DJI", "FlyCart 30", "", false},
 		{`^DJI[_ ]?FLYCART[-_ ]?100`, "DJI", "FlyCart 100", "", false},
-		// DJI 2025-2026 models
-		{`^DJI[_ ]?NEO[-_ ]?2`, "DJI", "Neo 2", "", false},
-		{`^DJI[_ ]?DOCK[-_ ]?3`, "DJI", "Dock 3", "", false},
-		{`^MAVIC[-_ ]?4[-_ ]?PRO`, "DJI", "Mavic 4 Pro", "", false},
-		{`^MAVIC[-_ ]?4[-_ ]?CLASSIC`, "DJI", "Mavic 4 Classic", "", false},
-		{`^MINI[-_ ]?5[-_ ]?PRO`, "DJI", "Mini 5 Pro", "", false},
-		{`^AIR[-_ ]?4S`, "DJI", "Air 4S", "", false},
-		// DJI FPV ecosystem
 		{`^DJI[_ ]?GOGGLES[-_ ]?[N23]`, "DJI", "", "Goggles N/2/3", true},
 		{`^DJI[_ ]?O[34][-_ ]?AIR`, "DJI", "", "O3/O4 Air Unit", false},
-		// DJI 2025-2026 new models
+		{`^DJI[_ ]?DOCK[-_ ]?3`, "DJI", "Dock 3", "", false},
+		{`^DJI[-_ ]?AVINOX`, "DJI", "Avinox", "", false},
+		{`^DJI[-_ ]`, "DJI", "", "generic", false}, // Generic DJI catch-all — MUST be last of ^DJI patterns
+		{`^TELLO[-_ ]`, "DJI/Ryze", "Tello", "", false},
+		{`^TELLO$`, "DJI/Ryze", "Tello", "", false},
+		{`^PHANTOM[-_ ]`, "DJI", "", "Phantom", false},
+		{`^MAVIC[-_ ]?4[-_ ]?PRO`, "DJI", "Mavic 4 Pro", "", false},
+		{`^MAVIC[-_ ]?4[-_ ]?CLASSIC`, "DJI", "Mavic 4 Classic", "", false},
 		{`^MAVIC[-_ ]?4[-_ ]?MULTI`, "DJI", "Mavic 4 Multispectral", "", false},
 		{`^MAVIC[-_ ]?4[-_ ]?ENT`, "DJI", "Mavic 4 Enterprise", "", false},
-		{`^MINI[-_ ]?5[-_ ]?SE`, "DJI", "Mini 5 SE", "", false},
-		{`^AIR[-_ ]?4[-_ ]?PRO`, "DJI", "Air 4 Pro", "", false},
-		{`^FLIP[-_ ]?2`, "DJI", "Flip 2", "", false},
-		{`^NEO[-_ ]?2[-_ ]?PRO`, "DJI", "Neo 2 Pro", "", false},
+		{`^MAVIC[-_ ]`, "DJI", "", "Mavic", false},
+		{`^SPARK[-_ ]`, "DJI", "Spark", "", false},
+		{`^INSPIRE[-_ ]`, "DJI", "", "Inspire", false},
 		{`^M4E[-_ ]`, "DJI", "Matrice 4E", "", false},
 		{`^M4T[-_ ]`, "DJI", "Matrice 4T", "", false},
 		{`^M4S[-_ ]`, "DJI", "Matrice 4S", "", false},
 		{`^MATRICE[-_ ]?4`, "DJI", "", "Matrice 4", false},
+		{`^MATRICE`, "DJI", "", "Matrice", false},
+		{`^AGRAST60`, "DJI", "Agras T60", "", false},
+		{`^AGRAST70`, "DJI", "Agras T70", "", false},
+		{`^AGRAST100`, "DJI", "Agras T100", "", false},
+		{`^AGRAS[-_ ]`, "DJI", "", "Agras", false},
+		{`^FLYCART`, "DJI", "FlyCart 30", "", false},
+		{`^MINI[-_ ]?5[-_ ]?PRO`, "DJI", "Mini 5 Pro", "", false},
+		{`^MINI[-_ ]?5[-_ ]?SE`, "DJI", "Mini 5 SE", "", false},
+		{`^AIR[-_ ]?4S`, "DJI", "Air 4S", "", false},
+		{`^AIR[-_ ]?4[-_ ]?PRO`, "DJI", "Air 4 Pro", "", false},
+		{`^FLIP[-_ ]?2`, "DJI", "Flip 2", "", false},
+		{`^NEO[-_ ]?2[-_ ]?PRO`, "DJI", "Neo 2 Pro", "", false},
 		{`^DOCK[-_ ]?3[-_ ]?`, "DJI", "Dock 3", "", false},
-		{`^DJI[-_ ]?AVINOX`, "DJI", "Avinox", "", false},
 
 		// Parrot
 		{`^ANAFI[-_ ]`, "Parrot", "Anafi", "", false},
@@ -198,8 +197,8 @@ func init() {
 		{`^default-ssid$`, "Autel", "", "Autel broken RemoteID", false},
 		{`^Autel[-_ ]`, "Autel", "", "generic", false},
 		{`^AUTEL[-_ ]?EVO`, "Autel", "", "EVO", false},
+		{`^EVO[-_ ]?III`, "Autel", "", "EVO III", false},  // Must precede EVO II (III starts with II)
 		{`^EVO[-_ ]?II`, "Autel", "", "EVO II", false},
-		{`^EVO[-_ ]?III`, "Autel", "", "EVO III", false},
 		{`^EVO[-_ ]?NANO`, "Autel", "EVO Nano", "", false},
 		{`^EVO[-_ ]?LITE`, "Autel", "EVO Lite", "", false},
 		{`^EVO[-_ ]?MAX`, "Autel", "EVO Max", "", false},

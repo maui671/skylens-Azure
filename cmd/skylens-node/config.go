@@ -85,8 +85,9 @@ type PropagationConfig struct {
 }
 
 type ServerConfig struct {
-	HTTPPort       int      `yaml:"http_port"`
-	WebSocketPort  int      `yaml:"websocket_port"`
+	HTTPSPort    int    `yaml:"https_port"`
+	TLSCertFile  string `yaml:"tls_cert_file"`
+	TLSKeyFile   string `yaml:"tls_key_file"`
 	APIKey         string   `yaml:"api_key"`
 	AllowedOrigins []string `yaml:"allowed_origins"` // WebSocket allowed origins (empty = same-origin only)
 }
@@ -135,8 +136,9 @@ type DetectionConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			HTTPPort:      8080,
-			WebSocketPort: 8081,
+			HTTPSPort:      443,
+			TLSCertFile: "/etc/skylens/certs/skylens.crt",
+			TLSKeyFile:  "/etc/skylens/certs/skylens.key",
 		},
 		NATS: NATSConfig{
 			URL: "nats://localhost:4222",
@@ -299,14 +301,14 @@ func (c *Config) Validate() error {
 	var errors []string
 
 	// Server validation
-	if c.Server.HTTPPort < 1 || c.Server.HTTPPort > 65535 {
-		errors = append(errors, fmt.Sprintf("invalid HTTP port: %d (must be 1-65535)", c.Server.HTTPPort))
+	if c.Server.HTTPSPort < 1 || c.Server.HTTPSPort > 65535 {
+        	errors = append(errors, fmt.Sprintf("invalid HTTPS port: %d (must be 1-65535)", c.Server.HTTPSPort))
 	}
-	if c.Server.WebSocketPort < 1 || c.Server.WebSocketPort > 65535 {
-		errors = append(errors, fmt.Sprintf("invalid WebSocket port: %d (must be 1-65535)", c.Server.WebSocketPort))
+	if strings.TrimSpace(c.Server.TLSCertFile) == "" {
+        	errors = append(errors, "tls_cert_file is required")
 	}
-	if c.Server.HTTPPort == c.Server.WebSocketPort {
-		errors = append(errors, "HTTP and WebSocket ports must be different")
+	if strings.TrimSpace(c.Server.TLSKeyFile) == "" {
+        	errors = append(errors, "tls_key_file is required")
 	}
 
 	// NATS URL validation

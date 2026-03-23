@@ -688,6 +688,7 @@ pub fn get_drone_manufacturer_from_oui(mac: &[u8; 6]) -> Option<&'static str> {
         [0x58, 0xB8, 0x58] => Some("DJI"),
         // 62:60:1F has LAA bit set — dead code, filtered by LAA check above
         [0x88, 0x29, 0x85] => Some("DJI"),
+        [0x8C, 0x1E, 0xD9] => Some("DJI"),  // Phantom 4 Pro V2 (field-verified)
         [0x8C, 0x58, 0x23] => Some("DJI"),
         [0x9C, 0x5A, 0x8A] => Some("DJI"),
         [0xE4, 0x7A, 0x2C] => Some("DJI"),

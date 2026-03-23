@@ -1,0 +1,262 @@
+#!/bin/bash
+set -Eeuo pipefail
+
+SERVICE_USER="tdcadmin"
+SERVICE_GROUP="tdcadmin"
+
+OPT_DIR="/opt/skylens"
+CONFIG_DIR="${OPT_DIR}/configs"
+CONFIG_FILE="${CONFIG_DIR}/config.yaml"
+BINARY_PATH="${OPT_DIR}/skylens-node"
+
+CERT_DIR="/etc/skylens/certs"
+CERT_FILE="${CERT_DIR}/skylens.crt"
+KEY_FILE="${CERT_DIR}/skylens.key"
+
+LOG_FILE="/var/log/skylens-install.log"
+BUILD_DIR="/home/${SERVICE_USER}/skylens"
+
+echo "=== Skylens Install $(date) ===" > "$LOG_FILE"
+
+die() {
+    echo "[FAIL] $*"
+    tail -50 "$LOG_FILE"
+    exit 1
+}
+
+info() { echo "[INFO] $*"; }
+ok() { echo "[ OK ] $*"; }
+
+require_root() {
+    [[ $EUID -eq 0 ]] || die "Run as root"
+}
+
+generate_db_password() {
+    head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32
+}
+
+generate_jwt_secret() {
+    head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 64
+}
+
+require_root
+
+echo
+echo "===== Skylens Node Installer ====="
+
+DEFAULT_DB_PASS="$(generate_db_password)"
+DEFAULT_JWT_SECRET="$(generate_jwt_secret)"
+
+read -rp "DB password [auto]: " DB_PASSWORD
+DB_PASSWORD="${DB_PASSWORD:-$DEFAULT_DB_PASS}"
+
+read -rp "JWT secret [auto]: " JWT_SECRET
+JWT_SECRET="${JWT_SECRET:-$DEFAULT_JWT_SECRET}"
+
+[[ -n "$DB_PASSWORD" ]] || die "DB password empty"
+[[ -n "$JWT_SECRET" ]] || die "JWT secret empty"
+
+echo "[INFO] Using DB pass ${DB_PASSWORD:0:4}****"
+
+echo
+echo "===== Packages ====="
+
+dnf install -y \
+    curl wget git jq openssl python3 \
+    policycoreutils policycoreutils-python-utils \
+    redis \
+    >> "$LOG_FILE" 2>&1
+
+echo
+echo "===== User ====="
+
+id "$SERVICE_USER" >/dev/null 2>&1 || useradd -m "$SERVICE_USER"
+
+echo
+echo "===== Directories ====="
+
+install -d -m 0755 "$OPT_DIR" "$CONFIG_DIR" "$CERT_DIR"
+
+# CRITICAL FIX (lock file + runtime writes)
+chown -R "$SERVICE_USER:$SERVICE_GROUP" /opt/skylens
+chown -R "$SERVICE_USER:$SERVICE_GROUP" /etc/skylens
+
+chmod 0755 "$OPT_DIR" "$CONFIG_DIR" "$CERT_DIR"
+
+ok "Directories ready"
+
+echo
+echo
+echo "===== PostgreSQL ====="
+
+dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm >> "$LOG_FILE" 2>&1 || true
+dnf -y module disable postgresql >> "$LOG_FILE" 2>&1 || true
+dnf install -y postgresql16-server postgresql16 >> "$LOG_FILE" 2>&1 || die "Failed to install PostgreSQL"
+
+if [[ ! -d /var/lib/pgsql/16/data/base ]]; then
+    /usr/pgsql-16/bin/postgresql-16-setup initdb >> "$LOG_FILE" 2>&1 || die "initdb failed"
+fi
+
+systemctl enable --now postgresql-16 >> "$LOG_FILE" 2>&1 || die "Failed to start postgres"
+
+sleep 3
+
+# create role safely
+su - postgres -c "/usr/pgsql-16/bin/psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='skylens'\"" | grep -q 1 || \
+su - postgres -c "/usr/pgsql-16/bin/psql -c \"CREATE ROLE skylens LOGIN PASSWORD '${DB_PASSWORD}';\"" \
+>> "$LOG_FILE" 2>&1 || die "Failed to create role"
+
+# ALWAYS update password (fixes drift)
+su - postgres -c "/usr/pgsql-16/bin/psql -c \"ALTER ROLE skylens WITH PASSWORD '${DB_PASSWORD}';\"" \
+>> "$LOG_FILE" 2>&1 || die "Failed to update role password"
+
+# create DB safely
+su - postgres -c "/usr/pgsql-16/bin/psql -tAc \"SELECT 1 FROM pg_database WHERE datname='skylens'\"" | grep -q 1 || \
+su - postgres -c "/usr/pgsql-16/bin/psql -c \"CREATE DATABASE skylens OWNER skylens;\"" \
+>> "$LOG_FILE" 2>&1 || die "Failed to create DB"
+
+echo "[ OK ] PostgreSQL ready"
+
+echo
+echo "===== Redis ====="
+
+systemctl enable --now redis >> "$LOG_FILE" 2>&1
+
+echo
+echo "===== Go 1.24 ====="
+
+GO_VERSION="1.24.0"
+
+if [[ ! -x /usr/local/go/bin/go ]] || ! /usr/local/go/bin/go version | grep -q "go${GO_VERSION}"; then
+    echo "[INFO] Installing Go ${GO_VERSION}..."
+
+    rm -rf /usr/local/go
+
+    curl -L "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tgz >> "$LOG_FILE" 2>&1 \
+        || die "Failed to download Go"
+
+    tar -C /usr/local -xzf /tmp/go.tgz >> "$LOG_FILE" 2>&1 \
+        || die "Failed to extract Go"
+
+    rm -f /tmp/go.tgz
+fi
+
+export PATH="/usr/local/go/bin:$PATH"
+
+go version || die "Go not working"
+
+echo "[ OK ] Go ready: $(go version)"
+
+echo
+echo "===== Build Binary ====="
+
+cd "$BUILD_DIR" || die "Missing source dir"
+
+export PATH="/usr/local/go/bin:$PATH"
+
+go build -o "$BINARY_PATH" ./cmd/skylens-node >> "$LOG_FILE" 2>&1 \
+    || die "Build failed"
+
+chmod 755 "$BINARY_PATH"
+
+echo "[ OK ] Binary built"
+
+echo
+echo "===== TLS ====="
+
+if [[ ! -f "$CERT_FILE" ]]; then
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+        -keyout "$KEY_FILE" \
+        -out "$CERT_FILE" \
+        -subj "/CN=$(hostname)" >> "$LOG_FILE" 2>&1
+fi
+
+chmod 644 "$CERT_FILE"
+chmod 640 "$KEY_FILE"
+
+echo
+echo "===== Config ====="
+
+cat > "$CONFIG_FILE" <<EOF
+server:
+  https_port: 443
+  tls_cert_file: ${CERT_FILE}
+  tls_key_file: ${KEY_FILE}
+  allowed_origins: ["*"]
+
+nats:
+  url: "nats://127.0.0.1:4222"
+
+database:
+  host: "127.0.0.1"
+  port: 5432
+  name: "skylens"
+  user: "skylens"
+  password: "${DB_PASSWORD}"
+  ssl_mode: "disable"
+
+redis:
+  url: "redis://127.0.0.1:6379"
+
+auth:
+  enabled: true
+  jwt_secret: "${JWT_SECRET}"
+  secure_cookies: true
+EOF
+
+chmod 644 "$CONFIG_FILE"
+
+echo
+echo "===== Systemd ====="
+
+cat > /etc/systemd/system/skylens-node.service <<EOF
+[Unit]
+Description=Skylens Node
+After=network.target postgresql-16.service redis.service
+
+[Service]
+User=${SERVICE_USER}
+WorkingDirectory=${OPT_DIR}
+ExecStart=${BINARY_PATH} -config ${CONFIG_FILE}
+Restart=always
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+
+echo
+echo "===== Start Service ====="
+chown -R tdcadmin:tdcadmin /opt/skylens
+chown -R tdcadmin:tdcadmin /etc/skylens
+
+systemctl enable --now skylens-node >> "$LOG_FILE" 2>&1 || die "Service failed"
+
+sleep 5
+
+echo
+echo "===== VERIFY ====="
+
+# HARD FAIL if DB schema missing
+if ! PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -U skylens -d skylens -tAc "SELECT to_regclass('public.users');" | grep -q users; then
+    die "Auth schema NOT created (DB init failed)"
+fi
+
+# HARD FAIL if admin missing
+if ! PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -U skylens -d skylens -tAc "SELECT COUNT(*) FROM users WHERE username='admin';" | grep -q '^1$'; then
+    die "Admin user NOT seeded"
+fi
+
+curl -k https://127.0.0.1/health >/dev/null || die "Health check failed"
+
+echo
+echo "======================================="
+echo "SUCCESS"
+echo "======================================="
+echo
+echo "URL: https://$(hostname -I | awk '{print $1}')/"
+echo "LOGIN: admin / admin"
+echo

@@ -120,6 +120,28 @@ func (s *Store) Close() {
 	}
 }
 
+// PruneRateLimitMaps removes entries older than maxAge from the detection rate-limit maps.
+// Call periodically (e.g., every 10 minutes) to prevent unbounded growth.
+func (s *Store) PruneRateLimitMaps(maxAge time.Duration) {
+	cutoff := time.Now().Add(-maxAge)
+
+	s.detLastInsertMu.Lock()
+	for k, t := range s.detLastInsert {
+		if t.Before(cutoff) {
+			delete(s.detLastInsert, k)
+		}
+	}
+	s.detLastInsertMu.Unlock()
+
+	s.tapStatsLastMu.Lock()
+	for k, t := range s.tapStatsLast {
+		if t.Before(cutoff) {
+			delete(s.tapStatsLast, k)
+		}
+	}
+	s.tapStatsLastMu.Unlock()
+}
+
 // IsHealthy checks if database connections are working
 func (s *Store) IsHealthy() bool {
 	// Check PostgreSQL

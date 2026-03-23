@@ -72,6 +72,14 @@ message Detection {
 
     // ── Extended 802.11 fingerprint ──
     uint32 ht_capabilities = 70;          // HT Capability Info (802.11n) — device hardware fingerprint
+
+    // ── RF/SDR detection fields ──
+    double rf_center_freq_mhz = 80;      // Center frequency of detected RF signal
+    double rf_bandwidth_mhz = 81;        // Measured signal bandwidth
+    string rf_modulation = 82;           // "ofdm", "fm", "lora", "fhss", "unknown"
+    int32  rf_power_dbm = 83;            // Measured signal power (dBm)
+    string rf_protocol = 84;             // "dji_ocusync", "analog_fpv", "elrs", "crossfire", "dji_droneid", "unknown"
+    string rf_synthetic_id = 85;         // Synthetic ID for multi-TAP correlation (e.g., "rf:5865000:20000")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -135,6 +143,13 @@ message TapStats {
     uint64 ble_detections = 41;          // Detections generated from BLE
     bool   ble_scanning = 42;            // Whether BLE scanner is actively running
     string ble_interface = 43;           // BLE adapter name (e.g., "hci0")
+
+    // ── SDR/RF scanner metrics ──
+    uint64 sdr_detections = 50;          // Total RF detections from SDR
+    uint64 sdr_scans = 51;              // Total band scan cycles completed
+    bool   sdr_scanning = 52;            // Whether SDR scanner is actively running
+    string sdr_device = 53;              // SDR device name (e.g., "hackrf")
+    int32  sdr_current_freq_mhz = 54;   // Current center frequency being scanned
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -215,6 +230,12 @@ enum DetectionSource {
     SOURCE_ADS_B = 7;                     // Future: ADS-B for larger drones
     SOURCE_TSHARK_REMOTEID = 8;           // OpenDroneID via tshark dissector
     SOURCE_TSHARK_SSID = 9;               // Drone SSID match via tshark
+    SOURCE_RF_ENERGY = 10;                // SDR energy detection (unknown protocol)
+    SOURCE_RF_FPV_ANALOG = 11;            // Analog 5.8GHz FPV video (FM modulation)
+    SOURCE_RF_FPV_DIGITAL = 12;           // Digital FPV video (OFDM — DJI/HDZero/Walksnail)
+    SOURCE_RF_DJI_DRONEID = 13;           // DJI DroneID decoded from SDR (2.4GHz OFDM burst)
+    SOURCE_RF_CONTROL_LINK = 14;          // Control link detected (ELRS/Crossfire/FHSS)
+    SOURCE_RF_OCUSYNC = 15;               // DJI OcuSync video link detected
 }
 
 enum HeightReference {

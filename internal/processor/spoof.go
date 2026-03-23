@@ -608,28 +608,38 @@ func calculateCorrelationBonus(d *Drone) int {
 	return 0
 }
 
-// extractVendorFromSSID extracts vendor name from SSID patterns
+// extractVendorFromSSID extracts vendor name from SSID patterns.
+// Short prefixes (<5 chars) require the SSID to start with "PREFIX-", "PREFIX_", or "PREFIX "
+// (i.e., prefix followed by a separator) to avoid false positives like "AIRPORT-WIFI" matching "AIR".
 func extractVendorFromSSID(ssid string) string {
 	ssid = strings.ToUpper(ssid)
 
-	// Check each prefix — uses package-level vendorPrefixMap
-	// Require word boundary for short patterns to avoid
-	// false positives like "AIRPORT-WIFI" matching "AIR" as DJI
 	for prefix, vendor := range vendorPrefixMap {
-		if strings.HasPrefix(ssid, prefix) {
-			return vendor
-		}
-		// For patterns >= 5 chars, substring match is safe enough
-		// For shorter ones, require separator boundary (-, _, space)
 		if len(prefix) >= 5 {
+			// Long prefix: safe to use HasPrefix or substring match
+			if strings.HasPrefix(ssid, prefix) {
+				return vendor
+			}
 			if strings.Contains(ssid, prefix) {
 				return vendor
 			}
 		} else {
-			// Check for word-boundary match: preceded by separator or at start
-			for _, sep := range []string{"-", "_", " "} {
-				if strings.Contains(ssid, sep+prefix) {
+			// Short prefix: require exact start with separator boundary
+			// "AIR-2S" matches, "AIRPORT-WIFI" does not
+			if strings.HasPrefix(ssid, prefix) {
+				rest := ssid[len(prefix):]
+				if rest == "" || rest[0] == '-' || rest[0] == '_' || rest[0] == ' ' || (rest[0] >= '0' && rest[0] <= '9') {
 					return vendor
+				}
+			}
+			// Also check for word-boundary match mid-string
+			for _, sep := range []string{"-", "_", " "} {
+				idx := strings.Index(ssid, sep+prefix)
+				if idx >= 0 {
+					after := idx + len(sep) + len(prefix)
+					if after >= len(ssid) || ssid[after] == '-' || ssid[after] == '_' || ssid[after] == ' ' || (ssid[after] >= '0' && ssid[after] <= '9') {
+						return vendor
+					}
 				}
 			}
 		}

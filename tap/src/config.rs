@@ -11,6 +11,8 @@ pub struct Config {
     pub logging: LoggingConfig,
     #[serde(default)]
     pub ble: BleConfig,
+    #[serde(default)]
+    pub sdr: SdrConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -133,6 +135,94 @@ impl Default for BleConfig {
             adapter: default_ble_adapter(),
         }
     }
+}
+
+/// SDR configuration for RF energy detection.
+#[derive(Debug, Deserialize, Clone)]
+pub struct SdrConfig {
+    /// Enable SDR scanning (requires SoapySDR device).
+    #[serde(default)]
+    pub enabled: bool,
+    /// SoapySDR device string (e.g., "hackrf", "driver=rtlsdr", "driver=lime")
+    #[serde(default = "default_sdr_device")]
+    pub device: String,
+    /// Sample rate in Hz (default: 20 MSPS)
+    #[serde(default = "default_sdr_sample_rate")]
+    pub sample_rate: u64,
+    /// RF gain in dB (default: 40)
+    #[serde(default = "default_sdr_gain")]
+    pub gain: u32,
+    /// FFT size in points (default: 1024). Must be power of 2.
+    #[serde(default)]
+    pub fft_size: Option<usize>,
+    /// Detection threshold in dB above noise floor (default: 10.0)
+    #[serde(default)]
+    pub threshold_db: Option<f64>,
+    /// Minimum adjacent FFT bins to count as a signal (default: 3)
+    #[serde(default)]
+    pub min_cluster_bins: Option<usize>,
+    /// Frequency bands to scan
+    #[serde(default = "default_sdr_bands")]
+    pub bands: Vec<SdrBand>,
+}
+
+impl Default for SdrConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            device: default_sdr_device(),
+            sample_rate: default_sdr_sample_rate(),
+            gain: default_sdr_gain(),
+            fft_size: None,
+            threshold_db: None,
+            min_cluster_bins: None,
+            bands: default_sdr_bands(),
+        }
+    }
+}
+
+/// A frequency band for SDR scanning.
+#[derive(Debug, Deserialize, Clone)]
+pub struct SdrBand {
+    /// Center frequency in MHz
+    pub center_mhz: u64,
+    /// Dwell time on this band in milliseconds
+    #[serde(default = "default_sdr_dwell_ms")]
+    pub dwell_ms: u64,
+    /// Human-readable label for logging and detection metadata
+    #[serde(default)]
+    pub label: String,
+}
+
+fn default_sdr_device() -> String {
+    "hackrf".to_string()
+}
+
+fn default_sdr_sample_rate() -> u64 {
+    20_000_000 // 20 MSPS
+}
+
+fn default_sdr_gain() -> u32 {
+    40
+}
+
+fn default_sdr_dwell_ms() -> u64 {
+    500
+}
+
+fn default_sdr_bands() -> Vec<SdrBand> {
+    vec![
+        SdrBand {
+            center_mhz: 2414,
+            dwell_ms: 2000,
+            label: "2.4ghz_droneid".to_string(),
+        },
+        SdrBand {
+            center_mhz: 5800,
+            dwell_ms: 500,
+            label: "5.8ghz_fpv".to_string(),
+        },
+    ]
 }
 
 fn default_ble_adapter() -> String {

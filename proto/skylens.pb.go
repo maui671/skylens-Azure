@@ -25,30 +25,42 @@ type DetectionSource int32
 
 const (
 	DetectionSource_SOURCE_UNKNOWN         DetectionSource = 0
-	DetectionSource_SOURCE_WIFI_BEACON     DetectionSource = 1 // 802.11 Beacon with RemoteID IE
-	DetectionSource_SOURCE_WIFI_NAN        DetectionSource = 2 // WiFi Neighbor Awareness Networking
-	DetectionSource_SOURCE_WIFI_PROBE_RESP DetectionSource = 3 // Probe Response
-	DetectionSource_SOURCE_BLUETOOTH_4     DetectionSource = 4 // BT4 Legacy Advertising
-	DetectionSource_SOURCE_BLUETOOTH_5     DetectionSource = 5 // BT5 Long Range
-	DetectionSource_SOURCE_DJI_OCUSYNC     DetectionSource = 6 // DJI proprietary (OcuSync/DroneID)
-	DetectionSource_SOURCE_ADS_B           DetectionSource = 7 // Future: ADS-B for larger drones
-	DetectionSource_SOURCE_TSHARK_REMOTEID DetectionSource = 8 // OpenDroneID via tshark dissector
-	DetectionSource_SOURCE_TSHARK_SSID     DetectionSource = 9 // Drone SSID match via tshark
+	DetectionSource_SOURCE_WIFI_BEACON     DetectionSource = 1  // 802.11 Beacon with RemoteID IE
+	DetectionSource_SOURCE_WIFI_NAN        DetectionSource = 2  // WiFi Neighbor Awareness Networking
+	DetectionSource_SOURCE_WIFI_PROBE_RESP DetectionSource = 3  // Probe Response
+	DetectionSource_SOURCE_BLUETOOTH_4     DetectionSource = 4  // BT4 Legacy Advertising
+	DetectionSource_SOURCE_BLUETOOTH_5     DetectionSource = 5  // BT5 Long Range
+	DetectionSource_SOURCE_DJI_OCUSYNC     DetectionSource = 6  // DJI proprietary (OcuSync/DroneID)
+	DetectionSource_SOURCE_ADS_B           DetectionSource = 7  // Future: ADS-B for larger drones
+	DetectionSource_SOURCE_TSHARK_REMOTEID DetectionSource = 8  // OpenDroneID via tshark dissector
+	DetectionSource_SOURCE_TSHARK_SSID     DetectionSource = 9  // Drone SSID match via tshark
+	DetectionSource_SOURCE_RF_ENERGY       DetectionSource = 10 // SDR energy detection (unknown protocol)
+	DetectionSource_SOURCE_RF_FPV_ANALOG   DetectionSource = 11 // Analog 5.8GHz FPV video (FM modulation)
+	DetectionSource_SOURCE_RF_FPV_DIGITAL  DetectionSource = 12 // Digital FPV video (OFDM — DJI/HDZero/Walksnail)
+	DetectionSource_SOURCE_RF_DJI_DRONEID  DetectionSource = 13 // DJI DroneID decoded from SDR (2.4GHz OFDM burst)
+	DetectionSource_SOURCE_RF_CONTROL_LINK DetectionSource = 14 // Control link detected (ELRS/Crossfire/FHSS)
+	DetectionSource_SOURCE_RF_OCUSYNC      DetectionSource = 15 // DJI OcuSync video link detected
 )
 
 // Enum value maps for DetectionSource.
 var (
 	DetectionSource_name = map[int32]string{
-		0: "SOURCE_UNKNOWN",
-		1: "SOURCE_WIFI_BEACON",
-		2: "SOURCE_WIFI_NAN",
-		3: "SOURCE_WIFI_PROBE_RESP",
-		4: "SOURCE_BLUETOOTH_4",
-		5: "SOURCE_BLUETOOTH_5",
-		6: "SOURCE_DJI_OCUSYNC",
-		7: "SOURCE_ADS_B",
-		8: "SOURCE_TSHARK_REMOTEID",
-		9: "SOURCE_TSHARK_SSID",
+		0:  "SOURCE_UNKNOWN",
+		1:  "SOURCE_WIFI_BEACON",
+		2:  "SOURCE_WIFI_NAN",
+		3:  "SOURCE_WIFI_PROBE_RESP",
+		4:  "SOURCE_BLUETOOTH_4",
+		5:  "SOURCE_BLUETOOTH_5",
+		6:  "SOURCE_DJI_OCUSYNC",
+		7:  "SOURCE_ADS_B",
+		8:  "SOURCE_TSHARK_REMOTEID",
+		9:  "SOURCE_TSHARK_SSID",
+		10: "SOURCE_RF_ENERGY",
+		11: "SOURCE_RF_FPV_ANALOG",
+		12: "SOURCE_RF_FPV_DIGITAL",
+		13: "SOURCE_RF_DJI_DRONEID",
+		14: "SOURCE_RF_CONTROL_LINK",
+		15: "SOURCE_RF_OCUSYNC",
 	}
 	DetectionSource_value = map[string]int32{
 		"SOURCE_UNKNOWN":         0,
@@ -61,6 +73,12 @@ var (
 		"SOURCE_ADS_B":           7,
 		"SOURCE_TSHARK_REMOTEID": 8,
 		"SOURCE_TSHARK_SSID":     9,
+		"SOURCE_RF_ENERGY":       10,
+		"SOURCE_RF_FPV_ANALOG":   11,
+		"SOURCE_RF_FPV_DIGITAL":  12,
+		"SOURCE_RF_DJI_DRONEID":  13,
+		"SOURCE_RF_CONTROL_LINK": 14,
+		"SOURCE_RF_OCUSYNC":      15,
 	}
 )
 
@@ -508,8 +526,15 @@ type Detection struct {
 	RemoteidPayload []byte `protobuf:"bytes,61,opt,name=remoteid_payload,json=remoteidPayload,proto3" json:"remoteid_payload,omitempty"` // Just the RemoteID TLV data
 	// ── Extended 802.11 fingerprint ──
 	HtCapabilities uint32 `protobuf:"varint,70,opt,name=ht_capabilities,json=htCapabilities,proto3" json:"ht_capabilities,omitempty"` // HT Capability Info (802.11n) — device hardware fingerprint
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// ── RF/SDR detection fields ──
+	RfCenterFreqMhz float64 `protobuf:"fixed64,80,opt,name=rf_center_freq_mhz,json=rfCenterFreqMhz,proto3" json:"rf_center_freq_mhz,omitempty"` // Center frequency of detected RF signal
+	RfBandwidthMhz  float64 `protobuf:"fixed64,81,opt,name=rf_bandwidth_mhz,json=rfBandwidthMhz,proto3" json:"rf_bandwidth_mhz,omitempty"`      // Measured signal bandwidth
+	RfModulation    string  `protobuf:"bytes,82,opt,name=rf_modulation,json=rfModulation,proto3" json:"rf_modulation,omitempty"`                // "ofdm", "fm", "lora", "fhss", "unknown"
+	RfPowerDbm      int32   `protobuf:"varint,83,opt,name=rf_power_dbm,json=rfPowerDbm,proto3" json:"rf_power_dbm,omitempty"`                   // Measured signal power (dBm)
+	RfProtocol      string  `protobuf:"bytes,84,opt,name=rf_protocol,json=rfProtocol,proto3" json:"rf_protocol,omitempty"`                      // "dji_ocusync", "analog_fpv", "elrs", "crossfire", "dji_droneid", "unknown"
+	RfSyntheticId   string  `protobuf:"bytes,85,opt,name=rf_synthetic_id,json=rfSyntheticId,proto3" json:"rf_synthetic_id,omitempty"`           // Synthetic ID for multi-TAP correlation (e.g., "rf:5865000:20000")
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *Detection) Reset() {
@@ -822,6 +847,48 @@ func (x *Detection) GetHtCapabilities() uint32 {
 	return 0
 }
 
+func (x *Detection) GetRfCenterFreqMhz() float64 {
+	if x != nil {
+		return x.RfCenterFreqMhz
+	}
+	return 0
+}
+
+func (x *Detection) GetRfBandwidthMhz() float64 {
+	if x != nil {
+		return x.RfBandwidthMhz
+	}
+	return 0
+}
+
+func (x *Detection) GetRfModulation() string {
+	if x != nil {
+		return x.RfModulation
+	}
+	return ""
+}
+
+func (x *Detection) GetRfPowerDbm() int32 {
+	if x != nil {
+		return x.RfPowerDbm
+	}
+	return 0
+}
+
+func (x *Detection) GetRfProtocol() string {
+	if x != nil {
+		return x.RfProtocol
+	}
+	return ""
+}
+
+func (x *Detection) GetRfSyntheticId() string {
+	if x != nil {
+		return x.RfSyntheticId
+	}
+	return ""
+}
+
 type TapHeartbeat struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	TapId       string                 `protobuf:"bytes,1,opt,name=tap_id,json=tapId,proto3" json:"tap_id,omitempty"`
@@ -839,7 +906,6 @@ type TapHeartbeat struct {
 	TemperatureCelsius float32 `protobuf:"fixed32,32,opt,name=temperature_celsius,json=temperatureCelsius,proto3" json:"temperature_celsius,omitempty"`
 	WifiInterface      string  `protobuf:"bytes,33,opt,name=wifi_interface,json=wifiInterface,proto3" json:"wifi_interface,omitempty"`
 	Version            string  `protobuf:"bytes,34,opt,name=version,proto3" json:"version,omitempty"`
-	BleInterface       string  `protobuf:"bytes,35,opt,name=ble_interface,json=bleInterface,proto3" json:"ble_interface,omitempty"` // BLE adapter name (e.g. "hci0")
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -958,13 +1024,6 @@ func (x *TapHeartbeat) GetVersion() string {
 	return ""
 }
 
-func (x *TapHeartbeat) GetBleInterface() string {
-	if x != nil {
-		return x.BleInterface
-	}
-	return ""
-}
-
 type TapStats struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	PacketsCaptured    uint64                 `protobuf:"varint,1,opt,name=packets_captured,json=packetsCaptured,proto3" json:"packets_captured,omitempty"`            // Total packets seen
@@ -996,6 +1055,12 @@ type TapStats struct {
 	BleDetections     uint64 `protobuf:"varint,41,opt,name=ble_detections,json=bleDetections,proto3" json:"ble_detections,omitempty"`             // Detections generated from BLE
 	BleScanning       bool   `protobuf:"varint,42,opt,name=ble_scanning,json=bleScanning,proto3" json:"ble_scanning,omitempty"`                   // Whether BLE scanner is actively running
 	BleInterface      string `protobuf:"bytes,43,opt,name=ble_interface,json=bleInterface,proto3" json:"ble_interface,omitempty"`                 // BLE adapter name (e.g., "hci0")
+	// ── SDR/RF scanner metrics ──
+	SdrDetections     uint64 `protobuf:"varint,50,opt,name=sdr_detections,json=sdrDetections,proto3" json:"sdr_detections,omitempty"`                 // Total RF detections from SDR
+	SdrScans          uint64 `protobuf:"varint,51,opt,name=sdr_scans,json=sdrScans,proto3" json:"sdr_scans,omitempty"`                                // Total band scan cycles completed
+	SdrScanning       bool   `protobuf:"varint,52,opt,name=sdr_scanning,json=sdrScanning,proto3" json:"sdr_scanning,omitempty"`                       // Whether SDR scanner is actively running
+	SdrDevice         string `protobuf:"bytes,53,opt,name=sdr_device,json=sdrDevice,proto3" json:"sdr_device,omitempty"`                              // SDR device name (e.g., "hackrf")
+	SdrCurrentFreqMhz int32  `protobuf:"varint,54,opt,name=sdr_current_freq_mhz,json=sdrCurrentFreqMhz,proto3" json:"sdr_current_freq_mhz,omitempty"` // Current center frequency being scanned
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1196,6 +1261,41 @@ func (x *TapStats) GetBleInterface() string {
 		return x.BleInterface
 	}
 	return ""
+}
+
+func (x *TapStats) GetSdrDetections() uint64 {
+	if x != nil {
+		return x.SdrDetections
+	}
+	return 0
+}
+
+func (x *TapStats) GetSdrScans() uint64 {
+	if x != nil {
+		return x.SdrScans
+	}
+	return 0
+}
+
+func (x *TapStats) GetSdrScanning() bool {
+	if x != nil {
+		return x.SdrScanning
+	}
+	return false
+}
+
+func (x *TapStats) GetSdrDevice() string {
+	if x != nil {
+		return x.SdrDevice
+	}
+	return ""
+}
+
+func (x *TapStats) GetSdrCurrentFreqMhz() int32 {
+	if x != nil {
+		return x.SdrCurrentFreqMhz
+	}
+	return 0
 }
 
 type TapCommand struct {
@@ -1768,7 +1868,7 @@ var File_proto_skylens_proto protoreflect.FileDescriptor
 
 const file_proto_skylens_proto_rawDesc = "" +
 	"\n" +
-	"\x13proto/skylens.proto\x12\askylens\"\x81\f\n" +
+	"\x13proto/skylens.proto\x12\askylens\"\xe8\r\n" +
 	"\tDetection\x12\x15\n" +
 	"\x06tap_id\x18\x01 \x01(\tR\x05tapId\x12!\n" +
 	"\ftimestamp_ns\x18\x02 \x01(\x03R\vtimestampNs\x12\x1f\n" +
@@ -1818,7 +1918,15 @@ const file_proto_skylens_proto_rawDesc = "" +
 	"\fcountry_code\x18; \x01(\tR\vcountryCode\x12\x1b\n" +
 	"\traw_frame\x18< \x01(\fR\brawFrame\x12)\n" +
 	"\x10remoteid_payload\x18= \x01(\fR\x0fremoteidPayload\x12'\n" +
-	"\x0fht_capabilities\x18F \x01(\rR\x0ehtCapabilities\"\xc1\x03\n" +
+	"\x0fht_capabilities\x18F \x01(\rR\x0ehtCapabilities\x12+\n" +
+	"\x12rf_center_freq_mhz\x18P \x01(\x01R\x0frfCenterFreqMhz\x12(\n" +
+	"\x10rf_bandwidth_mhz\x18Q \x01(\x01R\x0erfBandwidthMhz\x12#\n" +
+	"\rrf_modulation\x18R \x01(\tR\frfModulation\x12 \n" +
+	"\frf_power_dbm\x18S \x01(\x05R\n" +
+	"rfPowerDbm\x12\x1f\n" +
+	"\vrf_protocol\x18T \x01(\tR\n" +
+	"rfProtocol\x12&\n" +
+	"\x0frf_synthetic_id\x18U \x01(\tR\rrfSyntheticId\"\x9c\x03\n" +
 	"\fTapHeartbeat\x12\x15\n" +
 	"\x06tap_id\x18\x01 \x01(\tR\x05tapId\x12\x19\n" +
 	"\btap_name\x18\x02 \x01(\tR\atapName\x12!\n" +
@@ -1833,8 +1941,7 @@ const file_proto_skylens_proto_rawDesc = "" +
 	"\x0ememory_percent\x18\x1f \x01(\x02R\rmemoryPercent\x12/\n" +
 	"\x13temperature_celsius\x18  \x01(\x02R\x12temperatureCelsius\x12%\n" +
 	"\x0ewifi_interface\x18! \x01(\tR\rwifiInterface\x12\x18\n" +
-	"\aversion\x18\" \x01(\tR\aversion\x12#\n" +
-	"\rble_interface\x18# \x01(\tR\fbleInterface\"\xec\a\n" +
+	"\aversion\x18\" \x01(\tR\aversion\"\xa3\t\n" +
 	"\bTapStats\x12)\n" +
 	"\x10packets_captured\x18\x01 \x01(\x04R\x0fpacketsCaptured\x12)\n" +
 	"\x10packets_filtered\x18\x02 \x01(\x04R\x0fpacketsFiltered\x12'\n" +
@@ -1861,7 +1968,13 @@ const file_proto_skylens_proto_rawDesc = "" +
 	"\x12ble_advertisements\x18( \x01(\x04R\x11bleAdvertisements\x12%\n" +
 	"\x0eble_detections\x18) \x01(\x04R\rbleDetections\x12!\n" +
 	"\fble_scanning\x18* \x01(\bR\vbleScanning\x12#\n" +
-	"\rble_interface\x18+ \x01(\tR\fbleInterface\"\x94\x03\n" +
+	"\rble_interface\x18+ \x01(\tR\fbleInterface\x12%\n" +
+	"\x0esdr_detections\x182 \x01(\x04R\rsdrDetections\x12\x1b\n" +
+	"\tsdr_scans\x183 \x01(\x04R\bsdrScans\x12!\n" +
+	"\fsdr_scanning\x184 \x01(\bR\vsdrScanning\x12\x1d\n" +
+	"\n" +
+	"sdr_device\x185 \x01(\tR\tsdrDevice\x12/\n" +
+	"\x14sdr_current_freq_mhz\x186 \x01(\x05R\x11sdrCurrentFreqMhz\"\x94\x03\n" +
 	"\n" +
 	"TapCommand\x12\x15\n" +
 	"\x06tap_id\x18\x01 \x01(\tR\x05tapId\x12!\n" +
@@ -1913,7 +2026,7 @@ const file_proto_skylens_proto_rawDesc = "" +
 	"\bmetadata\x18\t \x03(\v2\x1c.skylens.Alert.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xfc\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x95\x03\n" +
 	"\x0fDetectionSource\x12\x12\n" +
 	"\x0eSOURCE_UNKNOWN\x10\x00\x12\x16\n" +
 	"\x12SOURCE_WIFI_BEACON\x10\x01\x12\x13\n" +
@@ -1924,7 +2037,14 @@ const file_proto_skylens_proto_rawDesc = "" +
 	"\x12SOURCE_DJI_OCUSYNC\x10\x06\x12\x10\n" +
 	"\fSOURCE_ADS_B\x10\a\x12\x1a\n" +
 	"\x16SOURCE_TSHARK_REMOTEID\x10\b\x12\x16\n" +
-	"\x12SOURCE_TSHARK_SSID\x10\t*X\n" +
+	"\x12SOURCE_TSHARK_SSID\x10\t\x12\x14\n" +
+	"\x10SOURCE_RF_ENERGY\x10\n" +
+	"\x12\x18\n" +
+	"\x14SOURCE_RF_FPV_ANALOG\x10\v\x12\x19\n" +
+	"\x15SOURCE_RF_FPV_DIGITAL\x10\f\x12\x19\n" +
+	"\x15SOURCE_RF_DJI_DRONEID\x10\r\x12\x1a\n" +
+	"\x16SOURCE_RF_CONTROL_LINK\x10\x0e\x12\x15\n" +
+	"\x11SOURCE_RF_OCUSYNC\x10\x0f*X\n" +
 	"\x0fHeightReference\x12\x16\n" +
 	"\x12HEIGHT_REF_UNKNOWN\x10\x00\x12\x16\n" +
 	"\x12HEIGHT_REF_TAKEOFF\x10\x01\x12\x15\n" +

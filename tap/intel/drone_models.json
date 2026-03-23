@@ -164,19 +164,25 @@
             "field_observed": true,
             "verified": "FAA DOC: 1581F4QW = Avata, confirmed Feb 2026"
         },
-        "1581F37Q": {
+        "1581F37QB": {
             "manufacturer": "DJI",
             "model": "FPV",
             "field_observed": true,
-            "verified": "Live capture: 1581F37QBJ5KBD1024M0 = DJI FPV, Feb 2026"
+            "verified": "Community: 37QB = DJI FPV, field detected serial 1581F37QBJ5KBD1024M0 (Feb 2026)"
+        },
+        "1581F37Q": {
+            "manufacturer": "DJI",
+            "model": "FPV"
         },
         "1581F4AE": {
             "manufacturer": "DJI",
-            "model": "Mini SE"
+            "model": "Mini SE",
+            "verified": "Community: 4AE = Mini SE"
         },
         "1581F4DT": {
             "manufacturer": "DJI",
-            "model": "Mini SE"
+            "model": "Mini SE",
+            "verified": "Community: 4DT = Mini SE (alternate prefix)"
         },
         "1581F4S": {
             "manufacturer": "DJI",
@@ -259,6 +265,11 @@
             "verified": "Community: 1581F67P = Mavic 3 Classic, confirmed Feb 2026"
         },
         "1581F6C5": {
+            "manufacturer": "DJI",
+            "model": "Mini 2 SE",
+            "verified": "Community: 6C5 = Mini 2 SE"
+        },
+        "1581F6C": {
             "manufacturer": "DJI",
             "model": "Mini 2 SE"
         },
@@ -371,29 +382,9 @@
             "model": "Inspire (Unknown Model)",
             "field_observed": true
         },
-        "1581F9DE": {
-            "manufacturer": "DJI",
-            "model": "Inspire 3",
-            "field_observed": true,
-            "verified": "Live captures: 4 unique Inspire 3 serials with F9DE prefix, Feb 2026"
-        },
         "1581FCA": {
             "manufacturer": "DJI",
             "model": "FlyCart 30"
-        },
-        "1748": {
-            "manufacturer": "Autel",
-            "model": "Autel Drone",
-            "field_observed": true,
-            "verified": "Live capture: 1748FEV5LTE825351132, Autel RemoteID, Feb 2026"
-        },
-        "1588E": {
-            "manufacturer": "Parrot",
-            "model": "Parrot Drone"
-        },
-        "1668B": {
-            "manufacturer": "Skydio",
-            "model": "Skydio Drone"
         },
         "3DR": {
             "manufacturer": "3D Robotics",
@@ -410,6 +401,12 @@
         "AIROB": {
             "manufacturer": "Airobotics",
             "model": "Optimus"
+        },
+        "1748": {
+            "manufacturer": "Autel",
+            "model": "EVO",
+            "field_observed": true,
+            "verified": "Field detected serial 1748FEV5LTE825351132, Autel EVO via WiFi RemoteID (Feb 2026)"
         },
         "AUT": {
             "manufacturer": "Autel",
@@ -555,6 +552,11 @@
             "manufacturer": "Percepto",
             "model": "AIM"
         },
+        "1588E": {
+            "manufacturer": "Parrot",
+            "model": "Anafi",
+            "verified": "CTA-2063: 1588E = Parrot serial prefix"
+        },
         "PI020": {
             "manufacturer": "Parrot",
             "model": "Bebop 2"
@@ -602,6 +604,11 @@
         "QSYS": {
             "manufacturer": "Quantum-Systems",
             "model": "Trinity F90+"
+        },
+        "1668B": {
+            "manufacturer": "Skydio",
+            "model": "Skydio",
+            "verified": "CTA-2063: 1668B = Skydio serial prefix"
         },
         "SKY2": {
             "manufacturer": "Skydio",
@@ -748,10 +755,8 @@
         "F45": "Mavic 3",
         "F4A": "Lito 1",
         "F4B": "Lito X1",
-        "F37Q": "FPV",
-        "F4AE": "Mini SE",
-        "F4DT": "Mini SE",
         "F4Q": "Avata",
+        "F37Q": "FPV",
         "F4S": "FPV",
         "F4T": "Avata",
         "F4U": "Avata 2",
@@ -771,8 +776,8 @@
         "F5P": "Mavic 4 Pro",
         "F5Q": "Mavic 4",
         "F67": "Mavic 3 Classic",
-        "F6C5": "Mini 2 SE",
         "F6M": "Mavic 3 Pro",
+        "F6C": "Mini 2 SE",
         "F6N": "Air 2S",
         "F6P": "Air 3",
         "F6Q": "Air 3S",
@@ -798,17 +803,16 @@
         "F9A": "Inspire 3",
         "F9B": "Inspire 2",
         "F9D": "Inspire (Unknown Model)",
-        "F9DE": "Inspire 3",
         "FCA": "FlyCart 30",
         "FCB": "FlyCart 100"
     },
     "oui_map": {
+        "08:FB:EA": "Autel Robotics (drone via AMPAK)",
         "00:0C:BF": "Holy Stone (drone)",
         "00:12:1C": "Parrot (drone)",
         "00:1A:F9": "AeroVironment (drone)",
         "00:26:7E": "Parrot (drone)",
         "04:A8:5A": "DJI (drone)",
-        "08:FB:EA": "Autel Robotics (drone)",
         "0C:9A:E6": "DJI (drone)",
         "18:C8:E7": "Holy Stone (drone)",
         "18:D7:93": "Autel Intelligent (drone)",
@@ -825,6 +829,7 @@
         "74:B8:0F": "Zipline (drone)",
         "84:83:19": "Hangzhou Zero Zero Technology / ZeroTech Dobby (drone)",
         "88:29:85": "DJI (drone)",
+        "8C:1E:D9": "DJI (drone)",
         "8C:58:23": "DJI (drone)",
         "90:03:B7": "Parrot (controller)",
         "90:3A:E6": "Parrot (drone)",
@@ -954,15 +959,15 @@
             "is_controller": true
         },
         {
-            "pattern": "^RM [A-Z0-9]+ [0-9]+$",
-            "manufacturer": "DJI",
-            "model_hint": "DJI Enterprise RC",
-            "is_controller": true
-        },
-        {
             "pattern": "^DJI[-_ ]RC",
             "manufacturer": "DJI",
             "model_hint": "controller",
+            "is_controller": true
+        },
+        {
+            "pattern": "^RM [A-Z0-9]+ \\d+",
+            "manufacturer": "DJI",
+            "model_hint": "DJI RC Enterprise",
             "is_controller": true
         },
         {

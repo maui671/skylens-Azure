@@ -72,8 +72,6 @@ function cacheDOMElements() {
     DOM.statusUptime = document.getElementById('status-uptime');
     DOM.statusVersion = document.getElementById('status-version');
     DOM.statusRate = document.getElementById('status-rate');
-    DOM.statusTailscale = document.getElementById('status-tailscale');
-    DOM.statusTsIp = document.getElementById('status-ts-ip');
     DOM.hudCoords = document.getElementById('hud-coords');
     DOM.hudZoom = document.getElementById('hud-zoom');
     DOM.modalBackdrop = document.getElementById('modal-backdrop');

@@ -113,6 +113,18 @@ func detectionSourceDisplayName(src pb.DetectionSource) string {
 		return "tshark RemoteID"
 	case pb.DetectionSource_SOURCE_TSHARK_SSID:
 		return "tshark SSID"
+	case pb.DetectionSource_SOURCE_RF_ENERGY:
+		return "RF Energy"
+	case pb.DetectionSource_SOURCE_RF_FPV_ANALOG:
+		return "RF Analog FPV"
+	case pb.DetectionSource_SOURCE_RF_FPV_DIGITAL:
+		return "RF Digital FPV"
+	case pb.DetectionSource_SOURCE_RF_DJI_DRONEID:
+		return "RF DJI DroneID"
+	case pb.DetectionSource_SOURCE_RF_CONTROL_LINK:
+		return "RF Control Link"
+	case pb.DetectionSource_SOURCE_RF_OCUSYNC:
+		return "RF OcuSync"
 	default:
 		return "Unknown"
 	}
@@ -337,8 +349,27 @@ func (r *Receiver) dbWorker(id int) {
 		// Wait for first job
 		select {
 		case <-r.dbCtx.Done():
-			slog.Debug("DB worker shutting down", "worker_id", id)
-			return
+			// Drain remaining jobs from the queue before exiting
+			for {
+				select {
+				case job, ok := <-r.dbQueue:
+					if !ok {
+						slog.Debug("DB worker drained and shutting down", "worker_id", id)
+						return
+					}
+					batch = append(batch, storage.DetectionJob{Drone: job.drone, IsNew: job.isNew})
+					if len(batch) >= maxBatchSize {
+						r.store.SaveDetectionBatch(batch)
+						batch = batch[:0]
+					}
+				default:
+					if len(batch) > 0 {
+						r.store.SaveDetectionBatch(batch)
+					}
+					slog.Debug("DB worker shutting down", "worker_id", id)
+					return
+				}
+			}
 		case job, ok := <-r.dbQueue:
 			if !ok {
 				return
@@ -665,6 +696,12 @@ func (r *Receiver) handleDetection(msg *nats.Msg) {
 	}
 	// Dedup cleanup runs on a background ticker (see Start), not here on the hot path
 
+	// Touch the TAP's LastSeen — keeps TAP "online" as long as detections flow,
+	// even if heartbeats are stuck (e.g. NATS publish timeout on TAP side).
+	if det.TapId != "" {
+		r.state.TouchTap(det.TapId)
+	}
+
 	// Check if this is a suspect candidate (WiFi detection without RemoteID)
 	// Route suspects through correlator before promoting to full drone tracking
 	if det.Manufacturer == "UNKNOWN" && det.Designation == "SUSPECT" {
@@ -875,11 +912,41 @@ func (r *Receiver) handleDetection(msg *nats.Msg) {
 	// identity/classification/state tracking, just not distance estimation.
 	isBLE := det.Source == pb.DetectionSource_SOURCE_BLUETOOTH_4 ||
 		det.Source == pb.DetectionSource_SOURCE_BLUETOOTH_5
+	isRF := det.Source >= pb.DetectionSource_SOURCE_RF_ENERGY &&
+		det.Source <= pb.DetectionSource_SOURCE_RF_OCUSYNC
 
 	var rssiAnalysis intel.RSSIAnalysis
 	var distanceEst float64
 	var rangeRing *processor.RangeRing
-	if det.Rssi != 0 && !isBLE {
+
+	// RF/SDR detections use protocol-specific calibration instead of WiFi live calibrator
+	if isRF && det.RfPowerDbm != 0 {
+		rfProto := intel.IdentifyRFProtocol(det.RfCenterFreqMhz, det.RfBandwidthMhz, det.RfModulation)
+		rfDist, rfMin, rfMax, rfConf := intel.EstimateRFDistance(det.RfPowerDbm, rfProto)
+		if tapLat, tapLon, tapOk := r.getTapPos(det.TapId); tapOk && tapLat != 0 && tapLon != 0 {
+			rangeRing = &processor.RangeRing{
+				TapID:       det.TapId,
+				TapLat:      tapLat,
+				TapLon:      tapLon,
+				DistanceM:   rfDist,
+				MinM:        rfMin,
+				MaxM:        rfMax,
+				Confidence:  rfConf,
+				RSSI:        det.RfPowerDbm,
+				Environment: string(rfProto),
+			}
+			distanceEst = rfDist
+			// Use RSSI field for tracking if not set
+			if det.Rssi == 0 {
+				det.Rssi = det.RfPowerDbm
+			}
+			slog.Info("RF range ring created",
+				"tap", det.TapId, "distance_m", rfDist,
+				"protocol", rfProto, "power_dbm", det.RfPowerDbm,
+				"freq_mhz", det.RfCenterFreqMhz, "bw_mhz", det.RfBandwidthMhz,
+			)
+		}
+	} else if det.Rssi != 0 && !isBLE {
 		rssiAnalysis = r.rssiTracker.Track(det.Identifier, float64(det.Rssi), model)
 		distanceEst = rssiAnalysis.DistanceEstM
 
@@ -969,6 +1036,39 @@ func (r *Receiver) handleDetection(msg *nats.Msg) {
 	serial := det.SerialNumber
 	uavType := det.UavType
 	manufacturer := det.Manufacturer
+
+	// Enrich RF detections with protocol-derived manufacturer/designation
+	if isRF && manufacturer == "" && det.RfProtocol != "" {
+		rfProto := intel.RFProtocol(det.RfProtocol)
+		switch rfProto {
+		case intel.RFProtoDJIOcuSync, intel.RFProtoDJIDroneID:
+			manufacturer = "DJI"
+		case intel.RFProtoAnalogFPV:
+			manufacturer = "FPV"
+			if designation == "" {
+				designation = "Analog FPV Drone"
+			}
+		case intel.RFProtoDigitalFPV:
+			manufacturer = "FPV"
+			if designation == "" {
+				designation = "Digital FPV Drone"
+			}
+		case intel.RFProtoELRS900, intel.RFProtoELRS2400:
+			manufacturer = "ELRS"
+			if designation == "" {
+				designation = "ELRS-Controlled Drone"
+			}
+		case intel.RFProtoCrossfire:
+			manufacturer = "TBS"
+			if designation == "" {
+				designation = "Crossfire-Controlled Drone"
+			}
+		default:
+			if designation == "" {
+				designation = "Unknown RF Drone"
+			}
+		}
+	}
 
 	// Extract serial from SSID if it starts with "RID-" (WiFi RemoteID broadcast)
 	// The SSID format is: RID-<serial_number>
@@ -1124,6 +1224,10 @@ func (r *Receiver) handleDetection(msg *nats.Msg) {
 				"original_len", len(det.Identifier),
 			)
 		}
+	}
+	// RF/SDR detections may have no MAC or serial — use synthetic ID
+	if cleanIdentifier == "" && det.RfSyntheticId != "" {
+		cleanIdentifier = det.RfSyntheticId
 	}
 	if cleanIdentifier == "" {
 		slog.Warn("Dropping detection with no usable identifier",
@@ -1606,68 +1710,79 @@ func (r *Receiver) runTrilateration(resolvedID string) {
 			}
 			if useSingleTap && len(uniqueTaps) >= 1 {
 				// Single effective TAP position: place estimate at distance along
-				// bearing from previous position (if any), otherwise north.
+				// bearing from a known reference. Try: previous position, drone GPS.
+				// Never default to north — a wrong position is worse than no position.
 				ut := uniqueTaps[0]
-				bearing := 0.0
+				bearing := math.NaN()
 				prevEst := r.state.GetDroneEstimatedPosition(resolvedID)
 				if prevEst != nil && prevEst.Latitude != 0 {
 					dLat := prevEst.Latitude - ut.lat
 					dLon := prevEst.Longitude - ut.lon
 					bearing = math.Atan2(dLon, dLat)
+				} else if d, ok := r.state.GetDrone(resolvedID); ok && d.Latitude != 0 && d.Longitude != 0 {
+					// Use drone RemoteID GPS as bearing hint
+					dLat := d.Latitude - ut.lat
+					dLon := d.Longitude - ut.lon
+					bearing = math.Atan2(dLon, dLat)
 				}
-				mPerDegLat := 111320.0
-				mPerDegLon := 111320.0 * math.Cos(ut.lat*math.Pi/180)
-				estLat := ut.lat + (ut.dist*math.Cos(bearing))/mPerDegLat
-				estLon := ut.lon + (ut.dist*math.Sin(bearing))/mPerDegLon
+				if !math.IsNaN(bearing) {
+					mPerDegLat := 111320.0
+					mPerDegLon := 111320.0 * math.Cos(ut.lat*math.Pi/180)
+					estLat := ut.lat + (ut.dist*math.Cos(bearing))/mPerDegLat
+					estLon := ut.lon + (ut.dist*math.Sin(bearing))/mPerDegLon
 
-				// Smoothing handled by Kalman filter in setFilteredPosition
+					estPos := &processor.EstimatedPosition{
+						Latitude:   estLat,
+						Longitude:  estLon,
+						ErrorM:     ut.unc,
+						Confidence: 0.2,
+						TapsUsed:   len(uniqueTaps),
+						Method:     "range_bearing",
+						Timestamp:  time.Now(),
+					}
+					r.setFilteredPosition(resolvedID, estPos)
+				}
+			}
+		}
+	} else if len(rings) == 1 {
+		// Single-TAP range-bearing fallback: place estimate at distance from TAP
+		// along bearing from a known reference (never blind north).
+		ring := rings[0]
+		if ring.DistanceM > 0 {
+			bearing := math.NaN()
+			prevEst := r.state.GetDroneEstimatedPosition(resolvedID)
+			if prevEst != nil && prevEst.Latitude != 0 {
+				dLat := prevEst.Latitude - ring.TapLat
+				dLon := prevEst.Longitude - ring.TapLon
+				bearing = math.Atan2(dLon, dLat)
+			} else if d, ok := r.state.GetDrone(resolvedID); ok && d.Latitude != 0 && d.Longitude != 0 {
+				// Use drone RemoteID GPS as bearing hint
+				dLat := d.Latitude - ring.TapLat
+				dLon := d.Longitude - ring.TapLon
+				bearing = math.Atan2(dLon, dLat)
+			}
+			if !math.IsNaN(bearing) {
+				mPerDegLat := 111320.0
+				mPerDegLon := 111320.0 * math.Cos(ring.TapLat*math.Pi/180)
+				estLat := ring.TapLat + (ring.DistanceM*math.Cos(bearing))/mPerDegLat
+				estLon := ring.TapLon + (ring.DistanceM*math.Sin(bearing))/mPerDegLon
+
+				unc := (ring.MaxM - ring.MinM) / 2
+				if unc < 50 {
+					unc = 50
+				}
 
 				estPos := &processor.EstimatedPosition{
 					Latitude:   estLat,
 					Longitude:  estLon,
-					ErrorM:     ut.unc,
-					Confidence: 0.2,
+					ErrorM:     unc,
+					Confidence: 0.15,
 					TapsUsed:   1,
 					Method:     "range_bearing",
 					Timestamp:  time.Now(),
 				}
 				r.setFilteredPosition(resolvedID, estPos)
 			}
-		}
-	} else if len(rings) == 1 {
-		// Single-TAP range-bearing fallback: place estimate at distance from TAP
-		// along bearing from previous position (if any), otherwise north.
-		ring := rings[0]
-		if ring.DistanceM > 0 {
-			bearing := 0.0
-			prevEst := r.state.GetDroneEstimatedPosition(resolvedID)
-			if prevEst != nil && prevEst.Latitude != 0 {
-				dLat := prevEst.Latitude - ring.TapLat
-				dLon := prevEst.Longitude - ring.TapLon
-				bearing = math.Atan2(dLon, dLat)
-			}
-			mPerDegLat := 111320.0
-			mPerDegLon := 111320.0 * math.Cos(ring.TapLat*math.Pi/180)
-			estLat := ring.TapLat + (ring.DistanceM*math.Cos(bearing))/mPerDegLat
-			estLon := ring.TapLon + (ring.DistanceM*math.Sin(bearing))/mPerDegLon
-
-			unc := (ring.MaxM - ring.MinM) / 2
-			if unc < 50 {
-				unc = 50
-			}
-
-			// Smoothing handled by Kalman filter in setFilteredPosition
-
-			estPos := &processor.EstimatedPosition{
-				Latitude:   estLat,
-				Longitude:  estLon,
-				ErrorM:     unc,
-				Confidence: 0.15,
-				TapsUsed:   1,
-				Method:     "range_bearing",
-				Timestamp:  time.Now(),
-			}
-			r.setFilteredPosition(resolvedID, estPos)
 		}
 	}
 
@@ -1867,10 +1982,7 @@ func (r *Receiver) handleHeartbeat(msg *nats.Msg) {
 		bleScanning = stats.BleScanning
 		bleIface = stats.BleInterface
 	}
-	// Fall back to heartbeat-level ble_interface if stats didn't have it
-	if bleIface == "" {
-		bleIface = hb.BleInterface
-	}
+	// ble_interface is in TapStats, no heartbeat-level fallback needed
 
 	// Log warning if kernel drops detected
 	if kernelDrop > 0 {
@@ -2001,7 +2113,11 @@ func (r *Receiver) Close() {
 		r.dbCancel()
 	}
 	if r.dbQueue != nil {
-		close(r.dbQueue)
+		// Safe close — only close once to prevent panic on double-Close()
+		func() {
+			defer func() { recover() }()
+			close(r.dbQueue)
+		}()
 	}
 	// Wait for workers to finish with timeout
 	done := make(chan struct{})

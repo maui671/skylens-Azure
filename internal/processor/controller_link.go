@@ -38,9 +38,13 @@ func (c *ControllerCorrelator) Start() {
 	go c.run()
 }
 
-// Stop halts the correlator.
+// Stop halts the correlator. Safe to call multiple times.
 func (c *ControllerCorrelator) Stop() {
-	close(c.stopCh)
+	select {
+	case <-c.stopCh:
+	default:
+		close(c.stopCh)
+	}
 }
 
 func (c *ControllerCorrelator) run() {

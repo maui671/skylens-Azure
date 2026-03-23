@@ -551,7 +551,6 @@ function renderHeader(d) {
 
     var sbVer = document.getElementById("sb-version");
     if (sbVer && d.version) sbVer.textContent = "v" + d.version;
-
 }
 
 // ─── THREAT BANNER ───
@@ -1424,7 +1423,6 @@ function initSettings() {
                 modal.style.display = "none";
             }
         });
-
     }
 }
 
@@ -1445,7 +1443,6 @@ function updateSettingsUI() {
     setText("settings-node-uuid", settingsData.node_uuid || "-");
     setText("settings-zmq-port", settingsData.zmq_port || "-");
     setText("settings-version", settingsData.version || "-");
-
 }
 
 function setText(id, text) {
@@ -1472,118 +1469,6 @@ function showSuccess(id, msg) {
         el.textContent = msg;
         el.style.display = "block";
     }
-}
-
-    var authkey = document.getElementById("ts-authkey").value.trim();
-    var hostname = document.getElementById("ts-hostname-input").value.trim();
-
-    if (!authkey) {
-        return;
-    }
-
-
-    // removed tailscale ui
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = "Connecting...";
-    }
-
-    SkylensAuth.fetch("/api/tailscale/connect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authkey: authkey, hostname: hostname })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.ok) {
-            document.getElementById("ts-authkey").value = "";
-            // Refresh status
-            setTimeout(function() {
-                poll();
-                updateSettingsUI();
-            }, 1000);
-        } else {
-        }
-    })
-    .catch(function(e) {
-    })
-    .finally(function() {
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = "Connect";
-        }
-    });
-}
-
-
-    SkylensAuth.fetch("/api/tailscale/disconnect", { method: "POST" })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.ok) {
-            setTimeout(function() {
-                poll();
-                updateSettingsUI();
-            }, 1000);
-        } else {
-        }
-    })
-    .catch(function(e) {
-    });
-}
-
-    if (!confirm("This will completely log out from Tailscale. Continue?")) {
-        return;
-    }
-
-
-    SkylensAuth.fetch("/api/tailscale/logout", { method: "POST" })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.ok) {
-            setTimeout(function() {
-                poll();
-                updateSettingsUI();
-            }, 1000);
-        } else {
-        }
-    })
-    .catch(function(e) {
-    });
-}
-
-// Render Tailscale connected peers
-    var section = document.getElementById("ts-peers-section");
-    var list = document.getElementById("ts-peers-list");
-    if (!section || !list) return;
-
-    if (!peers || peers.length === 0) {
-        section.style.display = "none";
-        return;
-    }
-
-    section.style.display = "block";
-
-    // Sort: online first, then by hostname
-    peers.sort(function(a, b) {
-        if (a.online !== b.online) return b.online ? 1 : -1;
-        return (a.hostname || "").localeCompare(b.hostname || "");
-    });
-
-    list.innerHTML = peers.map(function(p) {
-        var onlineClass = p.online ? "online" : "offline";
-        var name = p.hostname || p.dns_name || "Unknown";
-        var ip = p.ip || "-";
-        var os = p.os || "";
-
-        return '<div class="ts-peer">' +
-            '<span class="ts-peer-dot ' + onlineClass + '"></span>' +
-            '<div class="ts-peer-info">' +
-                '<div class="ts-peer-name">' + esc(name) + '</div>' +
-                '<div class="ts-peer-ip">' + esc(ip) + '</div>' +
-            '</div>' +
-            (os ? '<span class="ts-peer-os">' + esc(os) + '</span>' : '') +
-        '</div>';
-    }).join("");
 }
 
 // Store settings data when poll receives it

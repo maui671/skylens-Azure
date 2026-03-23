@@ -52,8 +52,11 @@ check_info() {
 
 print_header "NODE HEALTH CHECKS"
 
+# Check skylens-node service
 if systemctl is-active --quiet skylens-node 2>/dev/null; then
+    check_pass "skylens-node service is running"
 else
+    check_fail "skylens-node service is NOT running"
     echo "       Fix: sudo systemctl start skylens-node"
 fi
 

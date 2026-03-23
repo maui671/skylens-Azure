@@ -1,51 +1,34 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-APP_USER="tdcadmin"
-APP_GROUP="tdcadmin"
-DEPLOY_ROOT="/opt/skylens"
-CONFIG_DIR="/etc/skylens"
-DATA_DIR="/var/lib/skylens"
-LOG_DIR="/var/log/skylens"
-PGDATA="/var/lib/pgsql/data"
+echo "===== FULL SKYLENS UNINSTALL ====="
 
-log()   { echo "[INFO] $*"; }
-warn()  { echo "[WARN] $*"; }
-run()   { echo "+ $*"; "$@"; }
+systemctl stop skylens-node 2>/dev/null || true
+systemctl disable skylens-node 2>/dev/null || true
 
-[[ $EUID -eq 0 ]] || { echo "[ERROR] Run as root"; exit 1; }
+systemctl stop postgresql-16 2>/dev/null || true
+systemctl disable postgresql-16 2>/dev/null || true
 
-log "Stopping services"
-systemctl disable --now skylens-node 2>/dev/null || true
-systemctl disable --now nginx 2>/dev/null || true
-systemctl disable --now redis 2>/dev/null || true
-systemctl disable --now nats-server 2>/dev/null || true
-systemctl disable --now postgresql-16 2>/dev/null || true
+systemctl stop redis 2>/dev/null || true
+systemctl disable redis 2>/dev/null || true
 
-log "Removing service files"
-rm -f /etc/systemd/system/nats-server.service
-rm -f /etc/systemd/system/postgresql-16.service.d/override.conf
-rm -f /etc/systemd/system/redis.service.d/limit.conf
-systemctl daemon-reload || true
+systemctl stop nats 2>/dev/null || true
+systemctl disable nats 2>/dev/null || true
 
-log "Removing deployed runtime files"
-rm -rf "${DEPLOY_ROOT}"
-rm -rf "${CONFIG_DIR}"
-rm -rf "${DATA_DIR}"
-rm -f /usr/local/bin/skylens-node
-rm -f /etc/nginx/conf.d/skylens.conf
+rm -f /etc/systemd/system/skylens-node.service
+rm -f /etc/systemd/system/nats.service
 
-log "Removing PostgreSQL data"
-rm -rf "${PGDATA}"
+systemctl daemon-reexec
+systemctl daemon-reload
 
-log "Removing firewall rules"
-firewall-cmd --permanent --remove-service=http 2>/dev/null || true
-firewall-cmd --permanent --remove-service=https 2>/dev/null || true
-firewall-cmd --permanent --remove-port=4222/tcp 2>/dev/null || true
-firewall-cmd --reload 2>/dev/null || true
+rm -rf /opt/skylens
+rm -rf /etc/skylens
 
-log "Removing packages"
-dnf -y remove nginx redis nats-server postgresql16-server postgresql16 postgresql16-libs pgdg-redhat-repo || true
+dnf remove -y postgresql16 postgresql16-server postgresql16-libs redis || true
 
-log "Preserving source repo at /home/tdcadmin/skylens"
-log "Uninstall complete"
+rm -rf /var/lib/pgsql
+rm -rf /usr/local/go
+rm -f /usr/local/bin/nats-server
+
+echo
+echo "DONE — repo preserved at /home/tdcadmin/skylens"

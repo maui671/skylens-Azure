@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+echo "===== FULL SKYLENS UNINSTALL ====="
+
+SERVICE="skylens-node"
+
+echo "[1] Stop services"
+systemctl stop $SERVICE 2>/dev/null || true
+systemctl disable $SERVICE 2>/dev/null || true
+
+systemctl stop postgresql-16 2>/dev/null || true
+systemctl disable postgresql-16 2>/dev/null || true
+
+systemctl stop redis 2>/dev/null || true
+systemctl disable redis 2>/dev/null || true
+
+echo "[2] Remove systemd unit"
+rm -f /etc/systemd/system/${SERVICE}.service
+systemctl daemon-reexec
+systemctl daemon-reload
+
+echo "[3] Remove Skylens files"
+rm -rf /opt/skylens
+rm -rf /etc/skylens
+
+echo "[4] Remove PostgreSQL (FULL DATA WIPE)"
+dnf remove -y postgresql16 postgresql16-server postgresql16-libs || true
+rm -rf /var/lib/pgsql
+rm -rf /var/lib/pgsql/16
+
+echo "[5] Remove Redis"
+dnf remove -y redis || true
+
+echo "[6] Remove Go"
+rm -rf /usr/local/go
+
+echo "[7] Cleanup leftover runtime"
+rm -f /var/log/skylens-install.log
+
+echo
+echo "===== DONE ====="
+echo "Source code preserved at:"
+echo "/home/tdcadmin/skylens"

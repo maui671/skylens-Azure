@@ -22,6 +22,13 @@ func (a *AuthIntegration) Service() *auth.Service {
 	return a.service
 }
 
+// Close stops background goroutines in auth subsystem.
+func (a *AuthIntegration) Close() {
+	if a.handlers != nil {
+		a.handlers.Close()
+	}
+}
+
 // SetupAuth initializes the authentication system
 // Returns nil if auth is disabled or JWT secret is not set
 func (s *Server) SetupAuth() *AuthIntegration {

@@ -89,11 +89,11 @@ func TestMatchSSID_DJI(t *testing.T) {
 			isController: false,
 		},
 		{
-			name:         "DJI generic underscore",
+			name:         "DJI FPV underscore",
 			ssid:         "DJI_FPV",
 			expectMatch:  true,
 			manufacturer: "DJI",
-			wantModelOrHint: "", // Matches generic DJI pattern first
+			wantModelOrHint: "FPV", // Specific pattern now precedes generic
 			isController: false,
 		},
 		{
@@ -101,7 +101,7 @@ func TestMatchSSID_DJI(t *testing.T) {
 			ssid:         "DJI_AVATA",
 			expectMatch:  true,
 			manufacturer: "DJI",
-			wantModelOrHint: "", // Generic DJI pattern
+			wantModelOrHint: "Avata", // Specific pattern now precedes generic
 			isController: false,
 		},
 		{
@@ -109,7 +109,7 @@ func TestMatchSSID_DJI(t *testing.T) {
 			ssid:         "DJI_NEO",
 			expectMatch:  true,
 			manufacturer: "DJI",
-			wantModelOrHint: "", // Generic DJI pattern
+			wantModelOrHint: "Neo", // Specific pattern now precedes generic
 			isController: false,
 		},
 
@@ -392,18 +392,18 @@ func TestMatchSSID_Autel(t *testing.T) {
 			wantModelOrHint: "EVO II",
 		},
 		{
-			name:         "EVO III Pro - matches EVO II pattern first",
+			name:         "EVO III Pro - matches EVO III pattern",
 			ssid:         "EVO-III-PRO-V2",
 			expectMatch:  true,
 			manufacturer: "Autel",
-			wantModelOrHint: "EVO II", // First pattern match wins
+			wantModelOrHint: "EVO III", // EVO III pattern now precedes EVO II
 		},
 		{
-			name:         "EVO III Enterprise - matches EVO II pattern first",
+			name:         "EVO III Enterprise - matches EVO III pattern",
 			ssid:         "EVO-III-ENT",
 			expectMatch:  true,
 			manufacturer: "Autel",
-			wantModelOrHint: "EVO II", // First pattern match wins
+			wantModelOrHint: "EVO III", // EVO III pattern now precedes EVO II
 		},
 		{
 			name:         "EVO Max 4N/4T",

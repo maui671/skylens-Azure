@@ -207,19 +207,6 @@ button:active { transform: scale(0.97); }
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
-.ts-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    display: inline-block;
-}
-.ts-dot.ts-connected {
-    background: #667eea;
-    box-shadow: 0 0 5px #667eea;
-}
-.ts-dot.ts-disconnected {
-    background: var(--warn);
-    opacity: 0.6;
-}
 .hdr-uptime {
     font-size: 12px;
     color: var(--t2);
@@ -1414,58 +1401,6 @@ button:active { transform: scale(0.97); }
     color: var(--t0);
 }
 
-/* ─── TAILSCALE PEERS LIST ─── */
-.ts-peers-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.ts-peer {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    background: var(--bg2);
-    border-radius: var(--r);
-    border: 1px solid var(--bg3);
-}
-.ts-peer-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.ts-peer-dot.online {
-    background: var(--safe);
-    box-shadow: 0 0 6px var(--safe);
-}
-.ts-peer-dot.offline {
-    background: var(--t3);
-}
-.ts-peer-info {
-    flex: 1;
-    min-width: 0;
-}
-.ts-peer-name {
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--t0);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.ts-peer-ip {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent);
-}
-.ts-peer-os {
-    font-size: 11px;
-    color: var(--t3);
-    text-transform: capitalize;
-}
-.ts-peer-stats {
-    font-size: 10px;
-    color: var(--t3);
-    text-align: right;
-}
+
+
+

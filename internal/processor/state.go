@@ -350,6 +350,8 @@ type Tap struct {
 	BLEDetections     uint64 `json:"ble_detections"`
 	BLEScanning       bool    `json:"ble_scanning"`
 	SeenChannels      []int32 `json:"seen_channels"` // Channels observed from heartbeats
+
+	lastBroadcast time.Time `json:"-"` // internal: throttle TouchTap broadcasts
 }
 
 // SuspectCandidate represents a potential drone detection that has not yet been
@@ -446,6 +448,7 @@ func (s *StateManager) HydrateDrone(d *Drone) {
 	// Only add if not already present (shouldn't happen, but be safe)
 	if _, exists := shard.drones[d.Identifier]; !exists {
 		shard.drones[d.Identifier] = d
+		s.drones.updateIndexes(d.Identifier, d.SerialNumber, d.MACAddress)
 	}
 }
 
@@ -584,7 +587,9 @@ func (s *StateManager) BroadcastDroneUpdate(droneID string) {
 	if !ok {
 		return
 	}
-	s.broadcast(StateEvent{Type: "drone_update", Data: d})
+	// Broadcast a copy to prevent data races — consumers read without holding shard lock
+	droneCopy := *d
+	s.broadcast(StateEvent{Type: "drone_update", Data: &droneCopy})
 }
 
 // UpdateDrone updates or creates a drone in the state.
@@ -818,7 +823,9 @@ func (s *StateManager) UpdateDrone(d *Drone) (isNew bool, resolvedID string) {
 		})
 	}
 
-	s.broadcast(StateEvent{Type: "drone_update", Data: existing})
+	// Broadcast a copy to prevent data races — consumers read without holding shard lock
+	droneCopy := *existing
+	s.broadcast(StateEvent{Type: "drone_update", Data: &droneCopy})
 	return false, existing.Identifier
 }
 
@@ -981,6 +988,32 @@ func (s *StateManager) UpdateTap(t *Tap) {
 	s.broadcast(StateEvent{Type: "tap_status", Data: t})
 }
 
+// TouchTap marks a TAP as online and updates LastSeen.
+// Lightweight alternative to UpdateTap — called on every detection so
+// TAPs stay online as long as detections flow, even if heartbeats stop.
+// Broadcasts tap_status at most every 10 seconds to keep the dashboard fresh
+// without spamming WebSocket clients on every single detection.
+func (s *StateManager) TouchTap(tapID string) {
+	s.tapMu.Lock()
+	defer s.tapMu.Unlock()
+
+	t, ok := s.taps[tapID]
+	if !ok {
+		return // Unknown TAP — heartbeat will create it
+	}
+
+	now := time.Now()
+	wasOffline := t.Status != "online"
+	t.Status = "online"
+	t.LastSeen = now
+
+	// Broadcast if TAP just came online, or every 10s to keep dashboard timestamp fresh
+	if wasOffline || now.Sub(t.lastBroadcast) > 10*time.Second {
+		t.lastBroadcast = now
+		s.broadcast(StateEvent{Type: "tap_status", Data: t})
+	}
+}
+
 // GetDrone returns a drone by identifier
 func (s *StateManager) GetDrone(id string) (*Drone, bool) {
 	return s.drones.get(id)
@@ -1028,13 +1061,18 @@ func (s *StateManager) GetTap(id string) (*Tap, bool) {
 	return t, ok
 }
 
-// GetStats returns summary statistics
+// GetStats returns summary statistics (excludes controllers from drone counts)
 func (s *StateManager) GetStats() map[string]interface{} {
 	activeCount := 0
 	lostCount := 0
 	lowTrustCount := 0
+	controllerCount := 0
 
 	s.drones.forEach(func(d *Drone) {
+		if d.IsController {
+			controllerCount++
+			return
+		}
 		if d.Status == "active" {
 			activeCount++
 		} else {
@@ -1044,6 +1082,7 @@ func (s *StateManager) GetStats() map[string]interface{} {
 			lowTrustCount++
 		}
 	})
+	droneTotal := activeCount + lostCount
 
 	s.tapMu.RLock()
 	onlineTaps := 0
@@ -1062,13 +1101,14 @@ func (s *StateManager) GetStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"drones_active":   activeCount,
-		"drones_lost":     lostCount,
-		"drones_total":    s.drones.count(),
-		"low_trust_count": lowTrustCount,
-		"taps_online":     onlineTaps,
-		"taps_total":      tapTotal,
-		"trails_active":   trailCount,
+		"drones_active":    activeCount,
+		"drones_lost":      lostCount,
+		"drones_total":     droneTotal,
+		"controllers_total": controllerCount,
+		"low_trust_count":  lowTrustCount,
+		"taps_online":      onlineTaps,
+		"taps_total":       tapTotal,
+		"trails_active":    trailCount,
 	}
 }
 
